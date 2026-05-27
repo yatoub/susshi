@@ -701,6 +701,7 @@ fn resolve_entries(
                 let g_bastion = merge_bastion(&d.wallix, &group.wallix);
                 let g_jump = merge_jump(&d.jump, &group.jump);
                 let g_tunnels = replace_tunnels(&d.tunnels, &group.tunnels);
+                let g_tags = extend_tags(d.tags.as_ref(), group.tags.as_ref());
 
                 if let Some(envs) = &group.environments {
                     for env in envs {
@@ -722,6 +723,7 @@ fn resolve_entries(
                         let e_bastion = merge_bastion(&g_bastion, &env.wallix);
                         let e_jump = merge_jump(&g_jump, &env.jump);
                         let e_tunnels = replace_tunnels(&g_tunnels, &env.tunnels);
+                        let e_tags = extend_tags(Some(&g_tags), env.tags.as_ref());
 
                         let env_def = ServerDefaults {
                             user: e_user,
@@ -748,6 +750,7 @@ fn resolve_entries(
                             pre_connect_hook: d.pre_connect_hook.as_deref(),
                             post_disconnect_hook: d.post_disconnect_hook.as_deref(),
                             hook_timeout_secs: d.hook_timeout_secs.unwrap_or(5),
+                            tags: e_tags,
                         };
                         for server in &env.servers {
                             let r = resolve_server(server, &group.name, &env.name, &env_def)?;
@@ -779,6 +782,7 @@ fn resolve_entries(
                         pre_connect_hook: d.pre_connect_hook.as_deref(),
                         post_disconnect_hook: d.post_disconnect_hook.as_deref(),
                         hook_timeout_secs: d.hook_timeout_secs.unwrap_or(5),
+                        tags: g_tags.clone(),
                     };
                     for server in servers {
                         let r = resolve_server(server, &group.name, "", &grp_def)?;
@@ -810,6 +814,7 @@ fn resolve_entries(
                     pre_connect_hook: d.pre_connect_hook.as_deref(),
                     post_disconnect_hook: d.post_disconnect_hook.as_deref(),
                     hook_timeout_secs: d.hook_timeout_secs.unwrap_or(5),
+                    tags: extend_tags(None, d.tags.as_ref()),
                 };
                 let r = resolve_server(server, "", "", &top_def)?;
                 resolved.push(r);
@@ -865,8 +870,6 @@ fn replace_tunnels(
     child.clone().or_else(|| parent.clone())
 }
 
-/// Les tags s'accumulent : chaque niveau **ajoute** ses tags à ceux du niveau parent.
-/// Un serveur hérite donc des tags définis dans les defaults, le groupe et l'environnement.
 /// Remplace les occurrences `{{ var }}` dans `s` par les valeurs de `vars`.
 /// Les variables non définies sont laissées telles quelles (`{{ var }}`).
 pub fn interpolate(s: &str, vars: &HashMap<String, String>) -> String {
@@ -897,6 +900,8 @@ pub fn undefined_vars(s: &str, vars: &HashMap<String, String>) -> Vec<String> {
     found
 }
 
+/// Les tags s'accumulent : chaque niveau **ajoute** ses tags à ceux du niveau parent.
+/// Un serveur hérite donc des tags définis dans les defaults, le groupe et l'environnement.
 fn extend_tags(parent: Option<&Vec<String>>, child: Option<&Vec<String>>) -> Vec<String> {
     let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
     let mut merged: Vec<String> = Vec::new();
@@ -1251,6 +1256,8 @@ struct ServerDefaults<'a> {
     pre_connect_hook: Option<&'a str>,
     post_disconnect_hook: Option<&'a str>,
     hook_timeout_secs: u64,
+    /// Tags accumulés depuis defaults → group → env (union sans doublon).
+    tags: Vec<String>,
 }
 
 fn resolve_server(
@@ -1370,7 +1377,7 @@ fn resolve_server(
         use_system_ssh_config,
         probe_filesystems,
         tunnels,
-        tags: extend_tags(None, s.tags.as_ref()),
+        tags: extend_tags(Some(&def.tags), s.tags.as_ref()),
         control_master: def_control_master,
         agent_forwarding: def_agent_forwarding,
         control_path: if def_control_master {
@@ -2467,6 +2474,729 @@ groups: []
         assert!(
             warnings.is_empty(),
             "keep_open should not produce a ValidationWarning, got: {:?}",
+            warnings
+        );
+    }
+
+    // ─── Tests tag inheritance ────────────────────────────────────────────────
+
+    fn make_server(name: &str, host: &str, tags: Option<Vec<&str>>) -> Server {
+        Server {
+            name: name.to_string(),
+            host: host.to_string(),
+            tags: tags.map(|v| v.into_iter().map(str::to_owned).collect()),
+            ..Default::default()
+        }
+    }
+
+    fn make_group(name: &str, servers: Vec<Server>) -> Group {
+        Group {
+            name: name.to_string(),
+            user: None,
+            ssh_key: None,
+            mode: None,
+            ssh_port: None,
+            ssh_options: None,
+            wallix: None,
+            wallix_group: None,
+            jump: None,
+            probe_filesystems: None,
+            tunnels: None,
+            tags: None,
+            environments: None,
+            servers: Some(servers),
+        }
+    }
+
+    fn make_group_with_env(name: &str, envs: Vec<Environment>) -> Group {
+        Group {
+            name: name.to_string(),
+            user: None,
+            ssh_key: None,
+            mode: None,
+            ssh_port: None,
+            ssh_options: None,
+            wallix: None,
+            wallix_group: None,
+            jump: None,
+            probe_filesystems: None,
+            tunnels: None,
+            tags: None,
+            environments: Some(envs),
+            servers: None,
+        }
+    }
+
+    fn make_env(name: &str, servers: Vec<Server>) -> Environment {
+        Environment {
+            name: name.to_string(),
+            user: None,
+            ssh_key: None,
+            mode: None,
+            ssh_port: None,
+            ssh_options: None,
+            wallix: None,
+            wallix_group: None,
+            jump: None,
+            probe_filesystems: None,
+            tunnels: None,
+            tags: None,
+            servers,
+        }
+    }
+
+    #[test]
+    fn test_tags_union_across_all_levels() {
+        let mut env = make_env(
+            "E",
+            vec![make_server("srv", "10.0.0.1", Some(vec!["srv-tag"]))],
+        );
+        env.tags = Some(vec!["env-tag".to_string()]);
+        let mut group = make_group_with_env("G", vec![env]);
+        group.tags = Some(vec!["group-tag".to_string()]);
+        let config = Config {
+            defaults: Some(Defaults {
+                tags: Some(vec!["global".to_string()]),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(group)],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        let tags = &resolved[0].tags;
+        assert!(tags.contains(&"global".to_string()), "missing defaults tag");
+        assert!(tags.contains(&"group-tag".to_string()), "missing group tag");
+        assert!(tags.contains(&"env-tag".to_string()), "missing env tag");
+        assert!(tags.contains(&"srv-tag".to_string()), "missing server tag");
+        assert_eq!(tags.len(), 4);
+    }
+
+    #[test]
+    fn test_tags_deduplication_across_levels() {
+        let env = make_env(
+            "E",
+            vec![make_server("srv", "10.0.0.1", Some(vec!["shared"]))],
+        );
+        let mut group = make_group_with_env("G", vec![env]);
+        group.tags = Some(vec!["shared".to_string()]);
+        let config = Config {
+            defaults: Some(Defaults {
+                tags: Some(vec!["shared".to_string(), "global".to_string()]),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(group)],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        let tags = &resolved[0].tags;
+        assert_eq!(
+            tags.iter().filter(|t| t.as_str() == "shared").count(),
+            1,
+            "shared tag should appear only once, got: {:?}",
+            tags
+        );
+        assert_eq!(tags.len(), 2);
+    }
+
+    #[test]
+    fn test_tags_group_level_server_inherits_defaults_and_group() {
+        let mut group = make_group("G", vec![make_server("srv", "10.0.0.1", None)]);
+        group.tags = Some(vec!["group-tag".to_string()]);
+        let config = Config {
+            defaults: Some(Defaults {
+                tags: Some(vec!["defaults-tag".to_string()]),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(group)],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        let tags = &resolved[0].tags;
+        assert!(tags.contains(&"defaults-tag".to_string()));
+        assert!(tags.contains(&"group-tag".to_string()));
+        assert_eq!(tags.len(), 2);
+    }
+
+    #[test]
+    fn test_tags_top_level_server_inherits_defaults() {
+        let config = Config {
+            defaults: Some(Defaults {
+                tags: Some(vec!["top-tag".to_string()]),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Server(Server {
+                name: "bare-srv".to_string(),
+                host: "10.0.0.1".to_string(),
+                ..Default::default()
+            })],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert!(resolved[0].tags.contains(&"top-tag".to_string()));
+    }
+
+    // ─── Tests tunnel REPLACE semantics ──────────────────────────────────────
+
+    fn tunnel(local: u16, remote: u16) -> TunnelConfig {
+        TunnelConfig {
+            local_port: local,
+            remote_host: "127.0.0.1".to_string(),
+            remote_port: remote,
+            label: String::new(),
+        }
+    }
+
+    #[test]
+    fn test_tunnels_defaults_inherited_when_no_child_defines_them() {
+        let config = Config {
+            defaults: Some(Defaults {
+                tunnels: Some(vec![tunnel(5432, 5432)]),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env("E", vec![make_server("srv", "10.0.0.1", None)])],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert_eq!(resolved[0].tunnels, vec![tunnel(5432, 5432)]);
+    }
+
+    #[test]
+    fn test_tunnels_group_replaces_defaults() {
+        let mut group = make_group_with_env(
+            "G",
+            vec![make_env("E", vec![make_server("srv", "10.0.0.1", None)])],
+        );
+        group.tunnels = Some(vec![tunnel(6379, 6379)]);
+        let config = Config {
+            defaults: Some(Defaults {
+                tunnels: Some(vec![tunnel(5432, 5432)]),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(group)],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert_eq!(
+            resolved[0].tunnels,
+            vec![tunnel(6379, 6379)],
+            "group tunnels should fully replace defaults tunnels"
+        );
+    }
+
+    #[test]
+    fn test_tunnels_server_replaces_env() {
+        let mut env = make_env(
+            "E",
+            vec![Server {
+                name: "srv".to_string(),
+                host: "10.0.0.1".to_string(),
+                tunnels: Some(vec![tunnel(8080, 80)]),
+                ..Default::default()
+            }],
+        );
+        env.tunnels = Some(vec![tunnel(5432, 5432)]);
+        let config = Config {
+            defaults: None,
+            groups: vec![ConfigEntry::Group(make_group_with_env("G", vec![env]))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert_eq!(
+            resolved[0].tunnels,
+            vec![tunnel(8080, 80)],
+            "server tunnels should fully replace env tunnels"
+        );
+    }
+
+    // ─── Tests group-level servers (no environment) ───────────────────────────
+
+    #[test]
+    fn test_group_server_without_environment() {
+        let config = Config {
+            defaults: Some(Defaults {
+                user: Some("default-user".to_string()),
+                ssh_port: Some(2222),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group(
+                "Flat",
+                vec![make_server("srv", "10.0.0.1", None)],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert_eq!(resolved[0].user, "default-user");
+        assert_eq!(resolved[0].port, 2222);
+        assert_eq!(resolved[0].group_name, "Flat");
+        assert_eq!(resolved[0].env_name, "");
+    }
+
+    // ─── Tests control_master / agent_forwarding ──────────────────────────────
+
+    #[test]
+    fn test_resolve_control_master_from_defaults() {
+        let config = Config {
+            defaults: Some(Defaults {
+                control_master: Some(true),
+                agent_forwarding: Some(true),
+                control_path: Some("~/.ssh/ctl/%h_%p_%r".to_string()),
+                control_persist: Some("30m".to_string()),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env("E", vec![make_server("srv", "10.0.0.1", None)])],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        let s = &resolved[0];
+        assert!(s.control_master, "control_master should be true");
+        assert!(s.agent_forwarding, "agent_forwarding should be true");
+        assert!(
+            !s.control_path.is_empty(),
+            "control_path should be set when control_master=true"
+        );
+        assert_eq!(s.control_persist, "30m");
+    }
+
+    #[test]
+    fn test_resolve_control_master_false_by_default() {
+        let config = Config {
+            defaults: None,
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env("E", vec![make_server("srv", "10.0.0.1", None)])],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert!(!resolved[0].control_master);
+        assert!(!resolved[0].agent_forwarding);
+        assert!(resolved[0].control_path.is_empty());
+    }
+
+    // ─── Tests hooks ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_resolve_hooks_from_defaults() {
+        let config = Config {
+            defaults: Some(Defaults {
+                pre_connect_hook: Some("/hooks/pre.sh".to_string()),
+                post_disconnect_hook: Some("/hooks/post.sh".to_string()),
+                hook_timeout_secs: Some(15),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env("E", vec![make_server("srv", "10.0.0.1", None)])],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        let s = &resolved[0];
+        assert_eq!(s.pre_connect_hook.as_deref(), Some("/hooks/pre.sh"));
+        assert_eq!(s.post_disconnect_hook.as_deref(), Some("/hooks/post.sh"));
+        assert_eq!(s.hook_timeout_secs, 15);
+    }
+
+    #[test]
+    fn test_resolve_server_hook_overrides_defaults() {
+        let config = Config {
+            defaults: Some(Defaults {
+                pre_connect_hook: Some("/hooks/global.sh".to_string()),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env(
+                    "E",
+                    vec![Server {
+                        name: "srv".to_string(),
+                        host: "10.0.0.1".to_string(),
+                        pre_connect_hook: Some("/hooks/server.sh".to_string()),
+                        ..Default::default()
+                    }],
+                )],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert_eq!(
+            resolved[0].pre_connect_hook.as_deref(),
+            Some("/hooks/server.sh"),
+            "server-level hook should override defaults"
+        );
+    }
+
+    #[test]
+    fn test_resolve_hooks_absent_by_default() {
+        let config = Config {
+            defaults: None,
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env("E", vec![make_server("srv", "10.0.0.1", None)])],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert!(resolved[0].pre_connect_hook.is_none());
+        assert!(resolved[0].post_disconnect_hook.is_none());
+        assert_eq!(resolved[0].hook_timeout_secs, 5);
+    }
+
+    // ─── Tests ssh_cert / ssh_agent_sock ─────────────────────────────────────
+
+    #[test]
+    fn test_resolve_ssh_cert_from_defaults() {
+        let config = Config {
+            defaults: Some(Defaults {
+                ssh_cert: Some("/certs/id_ed25519-cert.pub".to_string()),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env("E", vec![make_server("srv", "10.0.0.1", None)])],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert_eq!(resolved[0].ssh_cert, "/certs/id_ed25519-cert.pub");
+    }
+
+    #[test]
+    fn test_resolve_ssh_agent_sock_from_defaults() {
+        let config = Config {
+            defaults: Some(Defaults {
+                ssh_agent_sock: Some("/run/user/1000/gnupg/S.gpg-agent.ssh".to_string()),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env("E", vec![make_server("srv", "10.0.0.1", None)])],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert_eq!(
+            resolved[0].ssh_agent_sock,
+            "/run/user/1000/gnupg/S.gpg-agent.ssh"
+        );
+    }
+
+    #[test]
+    fn test_resolve_ssh_agent_sock_server_overrides_defaults() {
+        let config = Config {
+            defaults: Some(Defaults {
+                ssh_agent_sock: Some("/run/global.sock".to_string()),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env(
+                    "E",
+                    vec![Server {
+                        name: "srv".to_string(),
+                        host: "10.0.0.1".to_string(),
+                        ssh_agent_sock: Some("/run/per-server.sock".to_string()),
+                        ..Default::default()
+                    }],
+                )],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert_eq!(resolved[0].ssh_agent_sock, "/run/per-server.sock");
+    }
+
+    // ─── Tests use_system_ssh_config ─────────────────────────────────────────
+
+    #[test]
+    fn test_resolve_use_system_ssh_config_false_by_default() {
+        let config = Config {
+            defaults: None,
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env("E", vec![make_server("srv", "10.0.0.1", None)])],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert!(!resolved[0].use_system_ssh_config);
+    }
+
+    #[test]
+    fn test_resolve_use_system_ssh_config_true_from_defaults() {
+        let config = Config {
+            defaults: Some(Defaults {
+                use_system_ssh_config: Some(true),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env("E", vec![make_server("srv", "10.0.0.1", None)])],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert!(resolved[0].use_system_ssh_config);
+    }
+
+    // ─── Tests wallix field defaults ─────────────────────────────────────────
+
+    #[test]
+    fn test_resolve_wallix_field_defaults_applied() {
+        let config = Config {
+            defaults: Some(Defaults {
+                mode: Some(ConnectionMode::Wallix),
+                wallix: Some(BastionConfig {
+                    host: Some("bastion.example.com".to_string()),
+                    user: Some("buser".to_string()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env(
+                    "E",
+                    vec![make_server("srv", "target.example.com", None)],
+                )],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        let s = &resolved[0];
+        assert!(s.wallix_auto_select, "auto_select should default to true");
+        assert!(
+            s.wallix_fail_if_menu_match_error,
+            "fail_if_menu_match_error should default to true"
+        );
+        assert_eq!(s.wallix_selection_timeout_secs, 8);
+        assert!(!s.wallix_direct, "direct should default to false");
+        assert!(s.wallix_authorization.is_none());
+        assert_eq!(s.wallix_account, "default");
+        assert_eq!(s.wallix_protocol, "SSH");
+    }
+
+    #[test]
+    fn test_resolve_wallix_direct_and_authorization() {
+        let config = Config {
+            defaults: Some(Defaults {
+                mode: Some(ConnectionMode::Wallix),
+                wallix: Some(BastionConfig {
+                    host: Some("bastion.example.com".to_string()),
+                    user: Some("buser".to_string()),
+                    direct: Some(true),
+                    authorization: Some("STI-TEAM_prod-admins".to_string()),
+                    auto_select: Some(false),
+                    selection_timeout_secs: Some(3),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env(
+                    "E",
+                    vec![make_server("srv", "target.example.com", None)],
+                )],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        let s = &resolved[0];
+        assert!(s.wallix_direct);
+        assert_eq!(
+            s.wallix_authorization.as_deref(),
+            Some("STI-TEAM_prod-admins")
+        );
+        assert!(!s.wallix_auto_select);
+        assert_eq!(s.wallix_selection_timeout_secs, 3);
+    }
+
+    #[test]
+    fn test_resolve_wallix_header_columns_custom() {
+        let config = Config {
+            defaults: Some(Defaults {
+                mode: Some(ConnectionMode::Wallix),
+                wallix: Some(BastionConfig {
+                    host: Some("bastion.example.com".to_string()),
+                    user: Some("buser".to_string()),
+                    header_columns: Some(vec![
+                        "ID".to_string(),
+                        "Target".to_string(),
+                        "Auth".to_string(),
+                    ]),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env(
+                    "E",
+                    vec![make_server("srv", "target.example.com", None)],
+                )],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert_eq!(
+            resolved[0].wallix_header_columns,
+            vec!["ID", "Target", "Auth"]
+        );
+    }
+
+    // ─── Tests jump multi-hop ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_resolve_jump_multihop_string_format() {
+        let config = Config {
+            defaults: Some(Defaults {
+                mode: Some(ConnectionMode::Jump),
+                jump: Some(vec![
+                    JumpConfig {
+                        host: Some("hop1.example.com".to_string()),
+                        user: Some("jump1".to_string()),
+                    },
+                    JumpConfig {
+                        host: Some("hop2.example.com".to_string()),
+                        user: Some("jump2".to_string()),
+                    },
+                ]),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env("E", vec![make_server("srv", "10.0.0.1", None)])],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert_eq!(
+            resolved[0].jump_host.as_deref(),
+            Some("jump1@hop1.example.com,jump2@hop2.example.com")
+        );
+    }
+
+    #[test]
+    fn test_resolve_jump_server_overrides_defaults() {
+        let config = Config {
+            defaults: Some(Defaults {
+                mode: Some(ConnectionMode::Jump),
+                jump: Some(vec![JumpConfig {
+                    host: Some("default-jump.example.com".to_string()),
+                    user: Some("default-jump-user".to_string()),
+                }]),
+                ..Default::default()
+            }),
+            groups: vec![ConfigEntry::Group(make_group_with_env(
+                "G",
+                vec![make_env(
+                    "E",
+                    vec![Server {
+                        name: "srv".to_string(),
+                        host: "10.0.0.1".to_string(),
+                        jump: Some(vec![JumpConfig {
+                            host: Some("custom-jump.example.com".to_string()),
+                            user: Some("custom-user".to_string()),
+                        }]),
+                        ..Default::default()
+                    }],
+                )],
+            ))],
+            includes: vec![],
+            vars: Default::default(),
+        };
+
+        let resolved = config.resolve().unwrap();
+        assert_eq!(
+            resolved[0].jump_host.as_deref(),
+            Some("custom-user@custom-jump.example.com"),
+            "server-level jump should replace defaults jump"
+        );
+    }
+
+    // ─── Tests validate_yaml at group and environment level ───────────────────
+
+    #[test]
+    fn test_validation_unknown_group_field() {
+        let yaml = r#"
+groups:
+  - name: G
+    typo_group_field: true
+    servers: []
+"#;
+        let warnings = validate_yaml(yaml, "test.yml");
+        assert!(
+            warnings.iter().any(|w| w.field == "typo_group_field"),
+            "expected ValidationWarning for typo_group_field, got: {:?}",
+            warnings
+        );
+    }
+
+    #[test]
+    fn test_validation_unknown_env_field() {
+        let yaml = r#"
+groups:
+  - name: G
+    environments:
+      - name: E
+        bad_env_key: "oops"
+        servers: []
+"#;
+        let warnings = validate_yaml(yaml, "test.yml");
+        assert!(
+            warnings.iter().any(|w| w.field == "bad_env_key"),
+            "expected ValidationWarning for bad_env_key, got: {:?}",
             warnings
         );
     }
