@@ -48,7 +48,7 @@ ssh2 = "0.9"
 
 [build-dependencies]
 clap = { version = "4", features = ["derive"] }
-clap_mangen = "0.2"
+clap_mangen = "0.3"
 flate2 = "1"
 
 [dev-dependencies]
