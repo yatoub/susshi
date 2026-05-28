@@ -43,12 +43,12 @@ nav:
   - TUI Guide: tui.md
   - CLI Reference: cli.md
   - Features:
-    - Tunnels: tunnels.md
-    - SCP Transfers: scp.md
-    - Wallix Bastion: wallix.md
-    - Import & Export: import-export.md
-    - SSH Advanced: ssh-advanced.md
-    - Hooks: hooks.md
+      - Tunnels: tunnels.md
+      - SCP Transfers: scp.md
+      - Wallix Bastion: wallix.md
+      - Import & Export: import-export.md
+      - SSH Advanced: ssh-advanced.md
+      - Hooks: hooks.md
   - Use Cases: use-cases.md
   - Troubleshooting: troubleshooting.md
   - Roadmap: roadmap.md
