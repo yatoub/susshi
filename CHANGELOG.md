@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.17.0] — 2026-05-28
+
+### Added
+
+- Improve project README documentation and badges ([#117](https://github.com/yatoub/susshi/pull/117))
+
+
 ## [0.16.0] — 2026-05-28
 
 ### Added
