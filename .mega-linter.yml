@@ -1,34 +1,23 @@
-# MegaLinter configuration — rust flavour
-# https://megalinter.io/latest/configuration/
+APPLY_FIXES: none
+DEFAULT_BRANCH: master
+PRINT_ALPACA: false
 
-FLAVOR: rust
-
+# Only run security-relevant linters.
+# RUST_CLIPPY is already enforced by the dedicated lint job.
 ENABLE_LINTERS:
-  - YAML_PRETTIER
+  # Workflow & shell quality
+  - ACTION_ACTIONLINT
+  - BASH_SHELLCHECK
   - YAML_YAMLLINT
-  - MARKDOWN_MARKDOWNLINT
+  # CVE / vulnerability scanning
+  - REPOSITORY_GRYPE
+  - REPOSITORY_TRIVY
+  # Secret detection (three independent scanners)
+  - REPOSITORY_GITLEAKS
   - REPOSITORY_SECRETLINT
-  - REPOSITORY_TRIVY
-
-# RUST_CLIPPY: runs in a musl container without system OpenSSL — fails to
-#   compile the crate. Clippy is already enforced in the Test Suite job.
-# RUST_RUSTFMT: already enforced in the Test Suite job.
-DISABLE_LINTERS:
-  - RUST_CLIPPY
-  - RUST_RUSTFMT
-
-# Trivy and prettier are informational only (prettier flags style, not correctness)
-DISABLE_ERRORS_LINTERS:
-  - REPOSITORY_TRIVY
-  - YAML_PRETTIER
-
-FILTER_REGEX_EXCLUDE: "(target/|Cargo\\.lock|examples/)"
-
-# Use our custom yamllint config tuned for GitHub Actions line lengths
-YAML_YAMLLINT_CONFIG_FILE: .yamllint.yml
-
-PRINT_ALL_FILES: false
-SHOW_ELAPSED_TIME: true
-
-GITHUB_STATUS_REPORTER: true
-GITHUB_COMMENT_REPORTER: false
+  - REPOSITORY_TRUFFLEHOG
+  # Static security analysis
+  - REPOSITORY_SEMGREP
+  - REPOSITORY_CHECKOV
+  # SBOM (informational — does not fail the job)
+  - REPOSITORY_SYFT
