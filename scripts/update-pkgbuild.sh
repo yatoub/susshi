@@ -25,4 +25,7 @@ sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD.bin
 sed -i "s/^b2sums=(.*/b2sums=('${B2SUM}')/" PKGBUILD.bin
 sed -i "s/^b2sums_x86_64=(.*/b2sums_x86_64=('${B2SUM_BIN}')/" PKGBUILD.bin
 
+echo "Updating susshi.spec to ${VERSION}..."
+sed -i "s/^Version:.*/Version:        ${VERSION}/" susshi.spec
+
 echo "Done: pkgver=${VERSION}, b2sums=${B2SUM}, b2sums_x86_64=${B2SUM_BIN}"

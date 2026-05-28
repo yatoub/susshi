@@ -1,0 +1,19 @@
+/* Catppuccin Mocha palette for dark mode */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        #f5c2e7;
+  --md-primary-fg-color--light: #f5c2e7;
+  --md-primary-fg-color--dark:  #cba6f7;
+  --md-accent-fg-color:         #cba6f7;
+  --md-default-bg-color:        #1e1e2e;
+  --md-default-bg-color--light: #181825;
+  --md-code-bg-color:           #181825;
+  --md-code-fg-color:           #cdd6f4;
+}
+
+/* Catppuccin Latte palette for light mode */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:        #ea76cb;
+  --md-primary-fg-color--light: #ea76cb;
+  --md-primary-fg-color--dark:  #8839ef;
+  --md-accent-fg-color:         #8839ef;
+}

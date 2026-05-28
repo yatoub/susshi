@@ -1,7 +1,7 @@
 Name:           susshi
-Version:        0.14.0
+Version:        0.17.0
 Release:        1%{?dist}
-Summary:        Modern terminal-based SSH connection manager
+Summary:        Terminal SSH manager — TUI, YAML inventory, jump hosts, Wallix bastion, tunnels, SCP
 License:        MIT
 URL:            https://github.com/yatoub/susshi
 Source0:        https://github.com/yatoub/susshi/archive/refs/tags/v%{version}.tar.gz
@@ -12,8 +12,10 @@ BuildRequires:  zlib-devel
 Requires:       openssh-clients
 
 %description
-susshi is a modern TUI SSH connection manager with Catppuccin theme,
-supporting direct, jump, and Wallix bastion connections.
+susshi is a terminal-based SSH connection manager written in Rust.
+It provides a Catppuccin-themed TUI with hierarchical YAML inventories,
+multi-hop jump hosts, Wallix bastion integration, SSH tunnels, SCP
+transfers, Ansible/Terraform export, fuzzy search, and per-server hooks.
 
 %prep
 %autosetup -n %{name}-%{version}
