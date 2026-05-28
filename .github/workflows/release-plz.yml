@@ -48,7 +48,7 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
       - name: Auto-merge release PR
-        if: steps.release-plz.outputs.pr != ''
+        if: steps.release-plz.outputs.prs_created == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
           PR_URL: ${{ fromJson(steps.release-plz.outputs.pr).html_url }}
