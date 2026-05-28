@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "susshi",
+    "description": "Terminal SSH manager with YAML inventories, multi-hop jump hosts, Wallix bastion, tunnels, SCP, and Catppuccin TUI — written in Rust.",
+    "url": "https://yatoub.github.io/susshi/",
+    "downloadUrl": "https://github.com/yatoub/susshi/releases/latest",
+    "softwareVersion": "{{ config.extra.version | default('latest') }}",
+    "operatingSystem": "Linux, macOS, Windows",
+    "applicationCategory": "DeveloperApplication",
+    "applicationSubCategory": "NetworkingApplication",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "license": "https://opensource.org/licenses/MIT",
+    "codeRepository": "https://github.com/yatoub/susshi",
+    "programmingLanguage": "Rust",
+    "author": {
+      "@type": "Person",
+      "name": "yatoub",
+      "url": "https://github.com/yatoub"
+    }
+  }
+  </script>
+{% endblock %}

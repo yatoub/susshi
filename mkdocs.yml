@@ -9,6 +9,7 @@ edit_uri: edit/master/docs/
 
 theme:
   name: material
+  custom_dir: docs/overrides
   logo: susshi.png
   favicon: susshi.png
   palette:
