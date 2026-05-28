@@ -1,14 +1,56 @@
 # 🍣 susshi
 
-[![CI](https://github.com/yatoub/susshi/actions/workflows/ci.yml/badge.svg)](https://github.com/yatoub/susshi/actions/workflows/ci.yml)
-[![Crates.io](https://img.shields.io/crates/v/susshi.svg)](https://crates.io/crates/susshi)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENCE)
-[![Security Audit](https://github.com/yatoub/susshi/actions/workflows/ci.yml/badge.svg?event=push&label=audit)](https://github.com/yatoub/susshi/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/yatoub/susshi/ci.yml?branch=master&style=flat-square)](https://github.com/yatoub/susshi/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/susshi?style=flat-square)](https://crates.io/crates/susshi)
+[![Crates downloads](https://img.shields.io/crates/d/susshi?style=flat-square)](https://crates.io/crates/susshi)
+
+[![MSRV](https://img.shields.io/badge/MSRV-1.88-blue?style=flat-square)](Cargo.toml)
+[![Maintenance](https://img.shields.io/badge/maintenance-active-brightgreen?style=flat-square)](https://github.com/yatoub/susshi)
+[![Security Audit](https://img.shields.io/github/actions/workflow/status/yatoub/susshi/ci.yml?label=Security%20Audit&logo=github&style=flat-square)](https://github.com/yatoub/susshi/actions/workflows/ci.yml)
+[![Top language](https://img.shields.io/github/languages/top/yatoub/susshi?style=flat-square)](https://github.com/yatoub/susshi)
 [![codecov](https://codecov.io/gh/yatoub/susshi/branch/master/graph/badge.svg)](https://codecov.io/gh/yatoub/susshi)
 
 **susshi** is a terminal-based SSH connection manager written in Rust — hierarchical inventory, Catppuccin-themed TUI, jump hosts, Wallix bastions, tunnels, and SCP in one place.
 
 ![susshi TUI screenshot](docs/susshi.png)
+
+## 🧐 Why Susshi?
+
+Why use `susshi` rather than plain `ssh` / a single `~/.ssh/config`?
+
+Managing dozens or hundreds of hosts with a single `ssh_config` file quickly becomes fragile and inefficient: no centralized visibility, no interactive interface, limited grouping, and poor ergonomics for common tasks (favorites, tunnels, SCP, bastions).
+
+`susshi` addresses these gaps with clear benefits:
+
+- **Ergonomics & speed**: fuzzy search, keyboard-driven navigation, help overlays and one-key connect — no editing and re-running commands.
+- **Infrastructure visibility**: hierarchical grouping, favorites, tags and filtered views that make the inventory understandable at a glance.
+- **Bastion & multi-hop workflows**: automatic orchestration of jump hops and Wallix integration — compose complex connection paths without repetitive `ssh_config` entries.
+- **Inventory management & reusability**: variable inheritance, environment profiles, YAML includes and exports to Ansible/Terraform — maintain templates instead of copies.
+- **Built-in operations**: tunnels, integrated SCP, pre/post-connect hooks and `--validate` checks to avoid human errors.
+- **Security & privacy**: local-first configuration, no cloud dependency, and automated audits in CI (cargo-deny).
+
+In short: `susshi` preserves compatibility with the SSH ecosystem while adding ergonomics, visibility and primitives to automate and secure your connections at scale.
+
+---
+
+### 🥊 How it compares to the alternatives
+
+| Feature | **Susshi** 🍣 | **Standard SSH Config** 📄 | **Termius / Warp** ☁️ | **ClusterSSH** 🕸️ |
+| :--- | :--- | :--- | :--- | :--- |
+| **Interface** | Modern, interactive TUI | Raw text / `grep` | Heavy GUI / Electron | Outdated X11 windows |
+| **Speed** | Instant (Native Rust) | Instant | Resource-heavy | Laggy on modern systems |
+| **Privacy** | 100% Local & Open Source | 100% Local | Cloud-first / Proprietary | Local |
+| **Workflow** | Fuzzy-finding & Tags | Manual typing | Mouse-driven | Multi-window chaos |
+| **Terminal Agnostic** | Works in **any** terminal | Works in any terminal | Forces their own app | Requires X11 forwarding |
+
+---
+
+### ✨ Key Benefits
+
+* **⚡ Blazing Fast & Lightweight:** Built in Rust with a `Ratatui` frontend. It compiles to a tiny native binary (< 10MB) that starts instantly and consumes virtually zero RAM.
+* **🔒 Privacy & Security First:** Your infrastructure layout is sensitive data. Susshi is local-first; it requires no login, no cloud synchronization, and features zero telemetry. Your data stays where it belongs: on your machine.
+* **🧠 Keyboard-Driven Ergonomics:** Keep your hands on the home row. Instantly filter through hundreds of servers using fuzzy search, navigate with Arrow/Vim keys, and connect with a single press of `Enter`.
+* **🧩 Fits Your Existing Workflow:** Susshi doesn't try to replace your ecosystem. It works perfectly inside `tmux`, `screen`, or your favorite terminal emulator (Alacritty, Kitty, iTerm2, WezTerm), acting as a dedicated Unix utility that does one thing right.
 
 ## Installation
 
