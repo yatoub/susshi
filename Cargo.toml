@@ -2,7 +2,7 @@
 name = "susshi"
 version = "0.16.1"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 description = "A modern terminal-based SSH connection manager with a beautiful Catppuccin TUI"
 license = "MIT"
 repository = "https://github.com/yatoub/susshi"

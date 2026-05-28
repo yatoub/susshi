@@ -1,0 +1,4 @@
+skip-check:
+  # workflow_dispatch tag input is intentional: allows manual re-publish
+  # of an existing release without re-running the full release pipeline.
+  - CKV_GHA_7
