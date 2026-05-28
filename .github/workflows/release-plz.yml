@@ -4,7 +4,8 @@ name: Changelog & Release PR
 #
 # Two outcomes depending on the state of the branch:
 #   - Pending commits exist  → open or refresh the release PR
-#     (bumps version in Cargo.toml, updates CHANGELOG.md).
+#     (bumps version in Cargo.toml, updates CHANGELOG.md),
+#     then auto-merge it once CI passes (no manual merge needed).
 #   - Release PR was merged  → create the git tag, publish to crates.io,
 #     and create the GitHub Release.
 #     The tag push then triggers release.yml.
@@ -38,9 +39,17 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run release-plz
+        id: release-plz
         uses: release-plz/action@v0.5
         env:
           # Must be a PAT, not GITHUB_TOKEN: GitHub will not fire workflow events
           # (i.e. release.yml) for tag pushes made with the built-in token.
           GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Auto-merge release PR
+        if: steps.release-plz.outputs.pr != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+          PR_URL: ${{ fromJson(steps.release-plz.outputs.pr).html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
