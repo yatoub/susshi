@@ -44,8 +44,8 @@ jobs:
             echo "Invalid tag format: $TAG" >&2
             exit 1
           fi
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -56,7 +56,7 @@ jobs:
           TAG: ${{ steps.ver.outputs.tag }}
         run: |
           curl -fsSL "https://github.com/yatoub/susshi/archive/refs/tags/${TAG}.tar.gz" -o archive.tar.gz
-          echo "b2sum=$(b2sum archive.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "b2sum=$(b2sum archive.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Patch PKGBUILD
         env:
@@ -102,8 +102,8 @@ jobs:
             echo "Invalid tag format: $TAG" >&2
             exit 1
           fi
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -115,8 +115,8 @@ jobs:
         run: |
           curl -fsSL "https://github.com/yatoub/susshi/archive/refs/tags/${TAG}.tar.gz" -o archive.tar.gz
           curl -fsSL "https://github.com/yatoub/susshi/releases/download/${TAG}/susshi-linux-x86_64" -o susshi-linux-x86_64
-          echo "src=$(b2sum archive.tar.gz | cut -d' ' -f1)" >> $GITHUB_OUTPUT
-          echo "bin=$(b2sum susshi-linux-x86_64 | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "src=$(b2sum archive.tar.gz | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          echo "bin=$(b2sum susshi-linux-x86_64 | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Patch PKGBUILD.bin
         env:
