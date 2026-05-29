@@ -30,16 +30,26 @@ jobs:
       contents: read
     if: >
       github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
 
     steps:
       - name: Resolve version to publish
         id: ver
         env:
           INPUT_TAG: ${{ github.event.inputs.tag }}
-          RUN_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
         run: |
-          TAG="${INPUT_TAG:-$RUN_HEAD_BRANCH}"
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          else
+            # workflow_run.head_branch is always the branch name (e.g. "master"),
+            # not the tag. Resolve by finding the tag that points to HEAD_SHA.
+            TAG=$(git ls-remote --tags "https://github.com/${REPO}.git" 'refs/tags/v*' \
+              | awk -v sha="$HEAD_SHA" \
+                  '$1 == sha { gsub(/refs\/tags\//, "", $2); gsub(/\^\{\}$/, "", $2); if ($2 ~ /^v[0-9]/) { print $2; exit } }')
+          fi
           if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
             echo "Invalid tag format: $TAG" >&2
             exit 1
@@ -88,16 +98,24 @@ jobs:
       contents: read
     if: >
       github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
 
     steps:
       - name: Resolve version to publish
         id: ver
         env:
           INPUT_TAG: ${{ github.event.inputs.tag }}
-          RUN_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
         run: |
-          TAG="${INPUT_TAG:-$RUN_HEAD_BRANCH}"
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG=$(git ls-remote --tags "https://github.com/${REPO}.git" 'refs/tags/v*' \
+              | awk -v sha="$HEAD_SHA" \
+                  '$1 == sha { gsub(/refs\/tags\//, "", $2); gsub(/\^\{\}$/, "", $2); if ($2 ~ /^v[0-9]/) { print $2; exit } }')
+          fi
           if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
             echo "Invalid tag format: $TAG" >&2
             exit 1
