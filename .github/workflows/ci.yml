@@ -226,6 +226,9 @@ jobs:
           - os: macos-14
             target: aarch64-apple-darwin
             openssl_mode: system
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            openssl_mode: system
 
     steps:
       - name: Checkout
@@ -242,11 +245,16 @@ jobs:
           shared-key: ${{ matrix.target }}
 
       - name: Install Linux build deps
-        if: startsWith(matrix.os, 'ubuntu')
+        if: contains(matrix.target, 'unknown-linux')
         shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools pkg-config libssl-dev
+          sudo apt-get install -y pkg-config libssl-dev
+          if [[ "$TARGET" == *musl* ]]; then
+            sudo apt-get install -y musl-tools
+          fi
 
       - name: Set OpenSSL paths (Windows)
         if: matrix.os == 'windows-latest'
