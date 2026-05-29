@@ -323,7 +323,8 @@ jobs:
           | while IFS= read -r branch; do
               open=$(gh pr list --head "$branch" --state open --json number --jq 'length')
               if [ "$open" = "0" ]; then
-                gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/$branch" \
-                  && echo "Deleted: $branch" || true
+                if gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/$branch" 2>/dev/null; then
+                  echo "Deleted: $branch"
+                fi
               fi
             done
