@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://yatoub.github.io/susshi/sitemap.xml

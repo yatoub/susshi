@@ -1,5 +1,5 @@
 pkgname=susshi-bin
-pkgver=0.17.0
+pkgver=0.18.0
 pkgrel=1
 pkgdesc='modern, terminal-based SSH connection manager (pre-built binary)'
 url='https://github.com/yatoub/susshi'
@@ -10,8 +10,8 @@ provides=('susshi')
 conflicts=('susshi')
 source=("https://github.com/yatoub/susshi/archive/refs/tags/v${pkgver}.tar.gz")
 source_x86_64=("susshi-${pkgver}-linux-amd64::https://github.com/yatoub/susshi/releases/download/v${pkgver}/susshi-linux-amd64")
-b2sums=('ff16e4ad1612ab034a1c442e4cf998ee7b366e1d1bef2f9c12fdb09a077800b342a6485e6547fe0e1c7ad1d58f27d34e74473838fc6237a2e8e7b93e33c613de')
-b2sums_x86_64=('944ebd8e626f5adacce021543366d13ee20cdce6ba09bf542f31d5eafa8d33ee608f07285aa80e5e3a1d8ad5e669f79d49555875ded586dccd931fcd20e11dc3')
+b2sums=('cf3fa1165d6c0a1a848486b8002cd5440fc5b42d64793d3912ca9274d34172be276e8ea819ca36adeddbeeeb5ae65f29a4b8c63a7f27800fc7de94405a71e7c0')
+b2sums_x86_64=('fb145980e8acd7ed65998e4f52c4eb5e0ff6af87767d7475c6c0d1b00cd5dda20e1d16bff227800e0c1cddd56234783772bc60830dca34ec08c7e0b07d7a601f')
 
 package() {
     install -Dm0755 "susshi-${pkgver}-linux-amd64" "$pkgdir/usr/bin/susshi"

@@ -1,0 +1,86 @@
+site_name: Susshi
+site_description: >
+  Terminal SSH manager with YAML inventories, multi-hop jump hosts,
+  Wallix bastion, tunnels, SCP, and Catppuccin TUI — written in Rust.
+site_url: https://yatoub.github.io/susshi/
+repo_url: https://github.com/yatoub/susshi
+repo_name: yatoub/susshi
+edit_uri: edit/master/docs/
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  logo: susshi.png
+  favicon: susshi.png
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: pink
+      accent: pink
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: pink
+      accent: pink
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Configuration: configuration.md
+  - TUI Guide: tui.md
+  - CLI Reference: cli.md
+  - Features:
+      - Tunnels: tunnels.md
+      - SCP Transfers: scp.md
+      - Wallix Bastion: wallix.md
+      - Import & Export: import-export.md
+      - SSH Advanced: ssh-advanced.md
+      - Hooks: hooks.md
+  - Use Cases: use-cases.md
+  - Troubleshooting: troubleshooting.md
+  - Roadmap: roadmap.md
+
+plugins:
+  - search
+  - social:
+      cards_layout_options:
+        background_color: "#1e1e2e"
+        color: "#cdd6f4"
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yatoub/susshi
+      name: susshi on GitHub
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.inlinehilite
+  - admonition
+  - pymdownx.details
+  - tables
+  - attr_list
+  - def_list
+  - toc:
+      permalink: true
