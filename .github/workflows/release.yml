@@ -181,7 +181,7 @@ jobs:
   # ── RPM package (Fedora) ──────────────────────────────────────────────────
 
   build-rpm:
-    name: RPM package
+    name: RPM package (x86_64)
     runs-on: ubuntu-latest
     container: fedora:latest
     permissions:
@@ -194,6 +194,18 @@ jobs:
 
       - name: Install build dependencies
         run: dnf install -y rust cargo openssl-devel zlib-devel pkgconf-pkg-config rpm-build rpmdevtools git
+
+      - name: Cache Cargo registry and build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            /github/home/.cargo/registry/index
+            /github/home/.cargo/registry/cache
+            /github/home/.cargo/git/db
+            /github/home/cargo-target
+          key: fedora-rpm-x86_64-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            fedora-rpm-x86_64-
 
       - name: Set up rpmbuild tree
         run: rpmdev-setuptree
@@ -211,6 +223,70 @@ jobs:
         env:
           OPENSSL_NO_VENDOR: "1"
           LIBZ_SYS_USE_PKG_CONFIG: "1"
+          CARGO_TARGET_DIR: /github/home/cargo-target
+        run: rpmbuild -ba susshi.spec
+
+      - name: Smoke test
+        shell: bash
+        run: |
+          rpm_file=$(find /github/home/rpmbuild/RPMS -name "susshi-*.rpm" | grep -v debug | head -n1)
+          dnf install -y "${rpm_file}"
+          susshi --version
+          rpm -e susshi
+
+      - name: Upload to GitHub Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: /github/home/rpmbuild/RPMS/**/*.rpm
+          file_glob: true
+          tag: ${{ github.event.inputs.tag || github.ref }}
+          overwrite: true
+
+  build-rpm-aarch64:
+    name: RPM package (aarch64)
+    runs-on: ubuntu-24.04-arm
+    container: fedora:latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Install build dependencies
+        run: dnf install -y rust cargo openssl-devel zlib-devel pkgconf-pkg-config rpm-build rpmdevtools git
+
+      - name: Cache Cargo registry and build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            /github/home/.cargo/registry/index
+            /github/home/.cargo/registry/cache
+            /github/home/.cargo/git/db
+            /github/home/cargo-target
+          key: fedora-rpm-aarch64-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            fedora-rpm-aarch64-
+
+      - name: Set up rpmbuild tree
+        run: rpmdev-setuptree
+
+      - name: Patch version in spec file
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" susshi.spec
+
+      - name: Fetch source archive
+        run: spectool -g -R susshi.spec
+
+      - name: Build RPM
+        env:
+          OPENSSL_NO_VENDOR: "1"
+          LIBZ_SYS_USE_PKG_CONFIG: "1"
+          CARGO_TARGET_DIR: /github/home/cargo-target
         run: rpmbuild -ba susshi.spec
 
       - name: Smoke test

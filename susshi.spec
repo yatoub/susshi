@@ -34,7 +34,7 @@ export LIBZ_SYS_USE_PKG_CONFIG=1
 cargo test --frozen
 
 %install
-install -Dm0755 target/release/%{name} %{buildroot}%{_bindir}/%{name}
+install -Dm0755 "${CARGO_TARGET_DIR:-target}/release/%{name}" %{buildroot}%{_bindir}/%{name}
 install -Dm0644 target/man/%{name}.1 %{buildroot}%{_mandir}/man1/%{name}.1
 install -Dm0644 README.md %{buildroot}%{_docdir}/%{name}/README.md
 cp -r docs/ %{buildroot}%{_docdir}/%{name}/docs/
