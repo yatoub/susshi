@@ -216,7 +216,7 @@ jobs:
       - name: Smoke test
         shell: bash
         run: |
-          rpm_file=$(find /github/home/rpmbuild/RPMS -name "*.rpm" | head -n1)
+          rpm_file=$(find /github/home/rpmbuild/RPMS -name "susshi-*.rpm" | grep -v debug | head -n1)
           dnf install -y "${rpm_file}"
           susshi --version
           rpm -e susshi
