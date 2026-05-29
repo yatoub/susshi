@@ -9,12 +9,12 @@ arch=('x86_64')
 provides=('susshi')
 conflicts=('susshi')
 source=("https://github.com/yatoub/susshi/archive/refs/tags/v${pkgver}.tar.gz")
-source_x86_64=("susshi-${pkgver}-linux-amd64::https://github.com/yatoub/susshi/releases/download/v${pkgver}/susshi-linux-amd64")
+source_x86_64=("susshi-${pkgver}-linux-x86_64::https://github.com/yatoub/susshi/releases/download/v${pkgver}/susshi-linux-x86_64")
 b2sums=('cf3fa1165d6c0a1a848486b8002cd5440fc5b42d64793d3912ca9274d34172be276e8ea819ca36adeddbeeeb5ae65f29a4b8c63a7f27800fc7de94405a71e7c0')
 b2sums_x86_64=('fb145980e8acd7ed65998e4f52c4eb5e0ff6af87767d7475c6c0d1b00cd5dda20e1d16bff227800e0c1cddd56234783772bc60830dca34ec08c7e0b07d7a601f')
 
 package() {
-    install -Dm0755 "susshi-${pkgver}-linux-amd64" "$pkgdir/usr/bin/susshi"
+    install -Dm0755 "susshi-${pkgver}-linux-x86_64" "$pkgdir/usr/bin/susshi"
     install -Dm0644 "susshi-${pkgver}/LICENCE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
     install -Dm0644 "susshi-${pkgver}/README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
     (cd "susshi-${pkgver}" && find docs/ -type f -exec install -Dm0644 {} "$pkgdir/usr/share/doc/$pkgname/{}" \;)
