@@ -79,7 +79,7 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.target }}
+          shared-key: ${{ matrix.target }}
 
       - name: Install Linux build deps
         if: contains(matrix.target, 'unknown-linux')
