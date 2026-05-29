@@ -1,6 +1,6 @@
 [package]
 name = "susshi"
-version = "0.18.0"
+version = "0.18.1"
 edition = "2024"
 rust-version = "1.88"
 description = "Terminal SSH manager with YAML inventories, multi-hop jump hosts, Wallix bastion, tunnels, SCP, and Catppuccin TUI"

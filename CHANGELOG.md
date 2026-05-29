@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.18.1] — 2026-05-29
+
+### Fixed
+
+- Fix(aur) + feat(ci): fix susshi-bin binary name, cache RPM builds, add aarch64 RPM ([#123](https://github.com/yatoub/susshi/pull/123))
+
+
 ## [0.18.0] — 2026-05-28
 
 ### Added
