@@ -156,7 +156,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run MegaLinter
-        uses: oxsecurity/megalinter/flavors/rust@v8
+        uses: oxsecurity/megalinter/flavors/rust@v9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
