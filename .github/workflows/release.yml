@@ -206,7 +206,7 @@ jobs:
         run: dnf install -y rust cargo openssl-devel zlib-devel pkgconf-pkg-config rpm-build rpmdevtools git
 
       - name: Cache Cargo registry and build artifacts
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             /github/home/.cargo/registry/index
