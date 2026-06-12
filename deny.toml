@@ -4,6 +4,11 @@ targets = []
 [advisories]
 version = 2
 yanked = "deny"
+ignore = [
+    # proc-macro-error2 is unmaintained (RUSTSEC-2026-0173); transitive dep of
+    # i18n-embed-fl with no safe upgrade available upstream.
+    "RUSTSEC-2026-0173",
+]
 
 [licenses]
 version = 2
