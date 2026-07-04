@@ -69,7 +69,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -139,7 +139,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
 
@@ -198,7 +198,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.inputs.tag || github.ref }}
 
@@ -264,7 +264,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout master
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # PAT required so this push triggers aur-publish.yml.
           # GITHUB_TOKEN pushes are silently ignored by workflow event triggers.
