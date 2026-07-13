@@ -51,7 +51,7 @@ fn make_app_with_group() -> App {
         })],
         vars: Default::default(),
     };
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
     // Expand everything so all items are visible.
     app.expanded_items.insert("Group:Grp".to_string());
     app.expanded_items.insert("Env:Grp:Env1".to_string());
@@ -101,7 +101,7 @@ fn open_overview_no_items_noop() {
         groups: vec![],
         vars: Default::default(),
     };
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
     app.open_overview();
     assert!(app.overview.is_none());
 }

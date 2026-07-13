@@ -54,7 +54,7 @@ fn make_app_two_servers() -> App {
         })],
         vars: Default::default(),
     };
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
     // Expand so servers are visible: [Group:G, Server:s1, Server:s2]
     app.expanded_items.insert("Group:G".to_string());
     app.items_dirty = true;
@@ -153,7 +153,7 @@ fn next_empty_list_noop() {
         groups: vec![],
         vars: Default::default(),
     };
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
     // Should not panic.
     app.next();
     app.previous();

@@ -47,7 +47,7 @@ fn make_app_with_server() -> App {
         })],
         vars: Default::default(),
     };
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
     // Clear overrides loaded from ~/.susshi_state.json to isolate tests.
     app.tunnel_overrides.clear();
     // Expand the group so the server is visible and selectable.

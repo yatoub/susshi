@@ -47,7 +47,7 @@ fn make_app_root_group_only() -> App {
         })],
         vars: Default::default(),
     };
-    clean(App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap())
+    clean(tests_helpers::make_test_app(config))
 }
 
 fn make_app_two_servers() -> App {
@@ -83,7 +83,7 @@ fn make_app_two_servers() -> App {
         })],
         vars: Default::default(),
     };
-    clean(App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap())
+    clean(tests_helpers::make_test_app(config))
 }
 
 // ─── expand_all ───────────────────────────────────────────────────────────────

@@ -45,7 +45,7 @@ fn make_simple_config() -> Config {
 #[test]
 fn collapse_all_clears_expanded_and_resets_selection() {
     let config = make_simple_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
 
     // Expand "Prod" group
     app.expanded_items.insert("Group:Prod".to_string());
@@ -60,7 +60,7 @@ fn collapse_all_clears_expanded_and_resets_selection() {
 #[test]
 fn collapse_all_marks_items_dirty() {
     let config = make_simple_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
 
     app.items_dirty = false;
     app.collapse_all();
@@ -71,7 +71,7 @@ fn collapse_all_marks_items_dirty() {
 #[test]
 fn invalidate_cache_sets_dirty() {
     let config = make_simple_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
 
     app.items_dirty = false;
     app.invalidate_cache();
@@ -84,7 +84,7 @@ fn invalidate_cache_sets_dirty() {
 #[test]
 fn toggle_favorites_view_flips_flag_and_resets_index() {
     let config = make_namespace_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
 
     assert!(!app.favorites_only);
     app.toggle_favorites_view();
@@ -99,7 +99,7 @@ fn toggle_favorites_view_flips_flag_and_resets_index() {
 #[test]
 fn toggle_favorites_view_marks_items_dirty() {
     let config = make_simple_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
 
     app.items_dirty = false;
     app.toggle_favorites_view();
@@ -109,7 +109,7 @@ fn toggle_favorites_view_marks_items_dirty() {
 #[test]
 fn record_connection_stores_timestamp() {
     let config = make_simple_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
 
     let server = app.resolved_servers.first().cloned().unwrap();
     assert!(app.last_seen_for(&server).is_none());
@@ -122,7 +122,7 @@ fn record_connection_stores_timestamp() {
 #[test]
 fn record_connection_timestamp_is_recent() {
     let config = make_simple_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
 
     let server = app.resolved_servers.first().cloned().unwrap();
     app.record_connection(&server);
@@ -142,7 +142,7 @@ fn record_connection_timestamp_is_recent() {
 #[test]
 fn expand_all_inserts_group_keys() {
     let config = make_simple_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
     app.expanded_items.clear();
 
     app.expand_all();
@@ -155,7 +155,7 @@ fn expand_all_inserts_group_keys() {
 #[test]
 fn expand_all_inserts_namespace_and_env_keys() {
     let config = make_namespace_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
     app.expanded_items.clear();
 
     app.expand_all();
@@ -169,7 +169,7 @@ fn expand_all_inserts_namespace_and_env_keys() {
 #[test]
 fn expand_all_marks_dirty() {
     let config = make_simple_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
     app.items_dirty = false;
 
     app.expand_all();
@@ -181,7 +181,7 @@ fn expand_all_marks_dirty() {
 
 fn make_app_with_selected_server() -> App {
     let config = make_simple_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
     app.favorites.clear();
     app.expanded_items.insert("Group:Prod".to_string());
     app.items_dirty = true;
@@ -210,7 +210,7 @@ fn toggle_favorite_removes_server() {
 #[test]
 fn is_selected_favorite_returns_false_when_no_server() {
     let config = make_simple_config();
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
     app.favorites.clear();
     // No expansion → group header selected, not a server.
     assert!(!app.is_selected_favorite());

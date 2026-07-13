@@ -1,5 +1,11 @@
 use super::*;
 
+/// Builds an `App` from a `Config` with the common empty state used across
+/// tests (no favorites, fake state path, no expanded items).
+pub(super) fn make_test_app(config: Config) -> App {
+    App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap()
+}
+
 /// Config with a namespace that contains a group with an environment,
 /// useful for testing namespaced-env expansion and favorites.
 pub(super) fn make_namespace_env_config() -> Config {
