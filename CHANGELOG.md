@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.18.3] — 2026-07-13
+
+### Changed
+
+- Split oversized modules and clean up test/panic debt ([#145](https://github.com/yatoub/susshi/pull/145))
+
+
 ## [0.18.1] — 2026-05-29
 
 ### Fixed
