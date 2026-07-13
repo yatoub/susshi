@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.19.0] — 2026-07-13
+
+### Added
+
+- Add Nix flake for building susshi ([#147](https://github.com/yatoub/susshi/pull/147))
+
+
 ## [0.18.3] — 2026-07-13
 
 ### Changed
