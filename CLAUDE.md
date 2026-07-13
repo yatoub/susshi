@@ -34,7 +34,12 @@ CI also tests these targets: `x86_64-unknown-linux-musl`, `x86_64-pc-windows-msv
 
 ### Configuration
 
-[config.rs](src/config.rs) (~80KB) is the largest file. It parses YAML inventory files, resolves `!include` directives, applies variable interpolation, and resolves the final connection mode (direct / single-hop / multi-hop jump / Wallix) from potentially inherited settings across group → environment → server.
+[config.rs](src/config.rs) + [config/](src/config/) parse YAML inventory files, resolve `!include` directives, apply variable interpolation, and resolve the final connection mode (direct / single-hop / multi-hop jump / Wallix) from potentially inherited settings across group → environment → server, split across submodules:
+
+- `types.rs` — struct/enum definitions (`Config`, `Group`, `Environment`, `Server`, `ResolvedServer`, etc.)
+- `resolve.rs` — inheritance resolution (`impl Config`, `resolve_entries`, `resolve_server`, `merge_bastion`/`merge_jump`)
+- `interpolate.rs` — variable interpolation (`interpolate`, `undefined_vars`, `merge_default_structs`)
+- `validate.rs` — YAML structural validation (`validate_yaml`, `fetch_url` for remote includes)
 
 ### UI layer
 
@@ -42,16 +47,16 @@ CI also tests these targets: `x86_64-unknown-linux-musl`, `x86_64-pc-windows-msv
 
 ### SSH operations
 
-- [ssh/client.rs](src/ssh/client.rs) — builds the `ssh` command, forkpty on Unix, Wallix auth flow
+- [ssh/client.rs](src/ssh/client.rs) + [ssh/client/](src/ssh/client/) — builds the `ssh` command, forkpty on Unix, Wallix auth flow, split into `args.rs` (argument building), `connect.rs` (direct/jump connection entry points), `wallix_pty.rs` (interactive Wallix PTY auth flow)
 - [ssh/sftp.rs](src/ssh/sftp.rs) — SCP transfers using ssh2
 - [ssh/tunnel.rs](src/ssh/tunnel.rs) — SSH tunnel lifecycle
-- [wallix/](src/wallix/) — Wallix bastion auth menu parsing and target selection
+- [wallix/](src/wallix/) — Wallix bastion auth menu parsing and target selection, split into `target.rs` (target/group string building), `menu.rs` (menu text parsing), `select.rs` (entry selection logic)
 - [hooks.rs](src/hooks.rs) — pre-connect / post-disconnect shell hooks
 
 ### Supporting modules
 
 - [import.rs](src/import.rs) — parses `~/.ssh/config` into susshi YAML
-- [export/](src/export/) — Ansible inventory export
+- [export/](src/export/) — inventory export to Ansible, CSV, Nmap, OpenSSH config, and Terraform formats
 - [probe.rs](src/probe.rs) — diagnostics (disk, SSH keys)
 - [i18n.rs](src/i18n.rs) — localization
 - [state.rs](src/state.rs) — persistent state (favorites, tunnel overrides) written to disk

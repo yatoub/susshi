@@ -37,7 +37,7 @@ fn make_simple_app() -> App {
         })],
         vars: Default::default(),
     };
-    App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap()
+    tests_helpers::make_test_app(config)
 }
 
 // ── reset_cmd ────────────────────────────────────────────────────────────────

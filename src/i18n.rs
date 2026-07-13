@@ -30,10 +30,15 @@ pub static LANGUAGE_LOADER: std::sync::LazyLock<FluentLanguageLoader> =
 
 /// Initialise le chargeur i18n depuis les variables d'environnement POSIX.
 /// Doit être appelé une seule fois au démarrage, avant toute utilisation de [`fl!`].
+///
+/// En cas d'échec de sélection de langue (locale inconnue, ressources
+/// manquantes, ...), on se rabat silencieusement sur la langue par défaut
+/// définie dans `i18n.toml` plutôt que de faire planter l'application.
 pub fn init() {
     let requested = DesktopLanguageRequester::requested_languages();
-    i18n_embed::select(&*LANGUAGE_LOADER, &Localizations, &requested)
-        .expect("failed to select i18n language");
+    if let Err(err) = i18n_embed::select(&*LANGUAGE_LOADER, &Localizations, &requested) {
+        eprintln!("warning: failed to select i18n language, falling back to default: {err}");
+    }
 }
 
 /// Macro de traduction. Retourne un [`String`] localisé.

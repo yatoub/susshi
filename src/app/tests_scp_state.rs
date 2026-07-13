@@ -38,7 +38,7 @@ fn make_app_with_server() -> App {
         })],
         vars: Default::default(),
     };
-    let mut app = App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap();
+    let mut app = tests_helpers::make_test_app(config);
     app.expanded_items.insert("Group:Grp".to_string());
     app.items_dirty = true;
     app.get_visible_items();
