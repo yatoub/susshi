@@ -1,0 +1,45 @@
+=============== Jul 15, 2026 (UTC) ===============
+20:01:55.737870 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+20:01:55.739885 db@open opening
+20:01:55.740168 version@stat F·[] S·0B[] Sc·[]
+20:01:55.741232 db@janitor F·2 G·0
+20:01:55.741259 db@open done T·1.350387ms
+20:01:55.741372 db@close closing
+20:01:55.741437 db@close done T·63.87µs
+=============== Jul 15, 2026 (UTC) ===============
+20:01:55.759253 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+20:01:55.759534 version@stat F·[] S·0B[] Sc·[]
+20:01:55.759553 db@open opening
+20:01:55.759587 journal@recovery F·1
+20:01:55.760025 journal@recovery recovering @1
+20:01:55.761282 memdb@flush created L0@2 N·1 S·295B "L81..4ba,v1":"L81..4ba,v1"
+20:01:55.761375 version@stat F·[1] S·295B[295B] Sc·[0.25]
+20:01:55.763214 db@janitor F·3 G·0
+20:01:55.763233 db@open done T·3.674598ms
+20:01:55.802637 transaction@flush created L0@5 N·10 S·1KiB "C96..deb,v8":"xFP..b87,v10"
+20:01:55.802668 version@stat F·[2] S·2KiB[2KiB] Sc·[0.50]
+20:01:55.803328 db@close closing
+20:01:55.803413 db@close done T·84.319µs
+=============== Jul 15, 2026 (UTC) ===============
+20:01:55.813252 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+20:01:55.813404 version@stat F·[2] S·2KiB[2KiB] Sc·[0.50]
+20:01:55.813421 db@open opening
+20:01:55.813455 journal@recovery F·1
+20:01:55.813678 journal@recovery recovering @3
+20:01:55.815171 memdb@flush created L0@6 N·2 S·386B "E81..4ba,v14":"L81..4ba,v13"
+20:01:55.815255 version@stat F·[3] S·2KiB[2KiB] Sc·[0.75]
+20:01:55.817118 db@janitor F·5 G·0
+20:01:55.817136 db@open done T·3.710285ms
+20:01:55.817234 db@close closing
+20:01:55.817300 db@close done T·63.97µs
+=============== Jul 15, 2026 (UTC) ===============
+20:01:55.827178 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+20:01:55.827302 version@stat F·[3] S·2KiB[2KiB] Sc·[0.75]
+20:01:55.827319 db@open opening
+20:01:55.827356 journal@recovery F·1
+20:01:55.827560 journal@recovery recovering @7
+20:01:55.828391 version@stat F·[3] S·2KiB[2KiB] Sc·[0.75]
+20:01:55.830588 db@janitor F·5 G·0
+20:01:55.830624 db@open done T·3.287171ms
+20:01:56.159285 db@close closing
+20:01:56.159458 db@close done T·169.471µs
