@@ -26,8 +26,10 @@ jobs:
   aur-source:
     name: Publish susshi (source)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
+      issues: write
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
@@ -78,7 +80,7 @@ jobs:
           sed -i "s/^b2sums=(.*/b2sums=(${B2SUM})/" PKGBUILD
 
       - name: Push to AUR
-        uses: KSXGitHub/github-actions-deploy-aur@v4.1.3
+        uses: KSXGitHub/github-actions-deploy-aur@da03e160361ce01bf087e790b6ffd196d7dccff7  # v4.1.3
         with:
           pkgname: susshi
           pkgbuild: ./PKGBUILD
@@ -89,13 +91,27 @@ jobs:
           ssh_keyscan_types: rsa,ecdsa,ed25519
           allow_empty_commits: false
 
+      - name: Notify on failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --title "AUR publish (susshi) failed for ${TAG:-unknown}" \
+            --label "ci-failure" \
+            --body "aur-source failed. Run: $RUN_URL"
+
   # ── susshi-bin (pre-built binary package) ─────────────────────────────────
 
   aur-bin:
     name: Publish susshi-bin (pre-built)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
+      issues: write
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
@@ -149,7 +165,7 @@ jobs:
           sed -i "s/^b2sums_x86_64=(.*/b2sums_x86_64=(${B2SUM_BIN})/" PKGBUILD
 
       - name: Push to AUR
-        uses: KSXGitHub/github-actions-deploy-aur@v4.1.3
+        uses: KSXGitHub/github-actions-deploy-aur@da03e160361ce01bf087e790b6ffd196d7dccff7  # v4.1.3
         with:
           pkgname: susshi-bin
           pkgbuild: ./PKGBUILD
@@ -159,3 +175,15 @@ jobs:
           commit_message: "chore: update to ${{ steps.ver.outputs.tag }}"
           ssh_keyscan_types: rsa,ecdsa,ed25519
           allow_empty_commits: false
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --title "AUR publish (susshi-bin) failed for ${TAG:-unknown}" \
+            --label "ci-failure" \
+            --body "aur-bin failed. Run: $RUN_URL"

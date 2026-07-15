@@ -34,6 +34,7 @@ jobs:
   build:
     name: Binary — ${{ matrix.asset_name }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     permissions:
       contents: write
     strategy:
@@ -126,7 +127,7 @@ jobs:
           chmod +x ${{ matrix.asset_name }} || true
 
       - name: Upload to GitHub Release
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de  # v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ matrix.asset_name }}
@@ -139,6 +140,7 @@ jobs:
   build-deb:
     name: DEB packages
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     permissions:
       contents: write
     steps:
@@ -184,7 +186,7 @@ jobs:
           sudo dpkg -r susshi
 
       - name: Upload to GitHub Release
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de  # v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: target/debian/susshi_*.deb
@@ -204,10 +206,15 @@ jobs:
   publish-apt:
     name: Publish APT repository
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [build-deb]
     if: github.event_name == 'push'
+    concurrency:
+      group: gh-pages-apt
+      cancel-in-progress: false
     permissions:
       contents: write
+      issues: write
     steps:
       - name: Download DEBs
         uses: actions/download-artifact@v4.1.3
@@ -275,12 +282,25 @@ jobs:
           git commit -m "chore(apt): publish $TAG"
           git push origin HEAD:gh-pages
 
+      - name: Notify on failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --title "APT repo publish failed for $TAG" \
+            --label "ci-failure" \
+            --body "publish-apt failed on release $TAG. Run: $RUN_URL"
+
   # ── RPM package (Fedora) ──────────────────────────────────────────────────
 
   build-rpm:
     name: RPM package (x86_64)
     runs-on: ubuntu-latest
-    container: fedora:latest
+    timeout-minutes: 40
+    container: fedora:41
     permissions:
       contents: write
     steps:
@@ -332,7 +352,7 @@ jobs:
           rpm -e susshi
 
       - name: Upload to GitHub Release
-        uses: svenstaro/upload-release-action@v2
+        uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de  # v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: /github/home/rpmbuild/RPMS/**/*.rpm
@@ -357,10 +377,15 @@ jobs:
   publish-rpm:
     name: Publish RPM repository
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [build-rpm]
     if: github.event_name == 'push'
+    concurrency:
+      group: gh-pages-rpm
+      cancel-in-progress: false
     permissions:
       contents: write
+      issues: write
     steps:
       - name: Download RPMs
         uses: actions/download-artifact@v4.1.3
@@ -428,15 +453,29 @@ jobs:
           git commit -m "chore(rpm): publish $TAG"
           git push origin HEAD:gh-pages
 
+      - name: Notify on failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --title "RPM repo publish failed for $TAG" \
+            --label "ci-failure" \
+            --body "publish-rpm failed on release $TAG. Run: $RUN_URL"
+
   # ── Arch Linux PKGBUILD (committed to repo) ───────────────────────────────
 
   update-pkgbuild:
     name: Update PKGBUILD in repo
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [build]
     if: github.event_name == 'push'
     permissions:
       contents: write
+      issues: write
     steps:
       - name: Checkout master
         uses: actions/checkout@v7
@@ -479,11 +518,24 @@ jobs:
           git commit -m "chore(release): update PKGBUILD to v${VERSION}"
           git push
 
+      - name: Notify on failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --title "PKGBUILD update failed for $TAG" \
+            --label "ci-failure" \
+            --body "update-pkgbuild failed on release $TAG. Run: $RUN_URL"
+
   # ── Cleanup stale release-plz branches ───────────────────────────────────
 
   cleanup-branches:
     name: Cleanup stale release-plz branches
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [update-pkgbuild]
     if: github.event_name == 'push'
     permissions:

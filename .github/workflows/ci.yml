@@ -40,6 +40,7 @@ jobs:
   preflight:
     name: Preflight
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions: {}
     outputs:
       skip: ${{ steps.gate.outputs.skip }}
@@ -61,6 +62,7 @@ jobs:
   lint:
     name: Lint (fmt + clippy)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [preflight]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -86,6 +88,7 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [preflight, lint]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -108,6 +111,7 @@ jobs:
   deny:
     name: Security (cargo deny)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [preflight]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -122,6 +126,7 @@ jobs:
   msrv:
     name: MSRV (Rust 1.88)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [preflight]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -144,6 +149,7 @@ jobs:
   nix:
     name: Nix flake
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [preflight]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -167,6 +173,7 @@ jobs:
   megalinter:
     name: MegaLinter
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [preflight]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -188,6 +195,7 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [preflight, test]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -226,6 +234,7 @@ jobs:
   cross-platform:
     name: Build — ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     needs: [preflight, test]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
