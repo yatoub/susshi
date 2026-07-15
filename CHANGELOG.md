@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.20.0] — 2026-07-15
+
+### Added
+
+- Publish an APT repository for auto-updating installs ([#150](https://github.com/yatoub/susshi/pull/150))
+
+
 ## [0.19.0] — 2026-07-13
 
 ### Added
