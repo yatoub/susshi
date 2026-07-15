@@ -55,6 +55,21 @@ Get up and running with susshi in under 5 minutes.
     sudo apt update && sudo apt install susshi
     ```
 
+=== "Fedora / RHEL (DNF)"
+    Adds a repo so `dnf upgrade` picks up new releases automatically:
+    ```bash
+    sudo rpm --import https://yatoub.github.io/susshi/apt-pubkey.asc
+    sudo tee /etc/yum.repos.d/susshi.repo <<'REPO'
+    [susshi]
+    name=Susshi
+    baseurl=https://yatoub.github.io/susshi/rpm
+    enabled=1
+    gpgcheck=1
+    gpgkey=https://yatoub.github.io/susshi/apt-pubkey.asc
+    REPO
+    sudo dnf install susshi
+    ```
+
 === "DEB / RPM (one-off)"
     Download from the [releases page](https://github.com/yatoub/susshi/releases/latest).
 
