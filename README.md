@@ -71,6 +71,9 @@ wget https://github.com/yatoub/susshi/releases/latest/download/susshi-macos-amd6
 
 # Arch Linux
 paru -S susshi-bin
+
+# NixOS / Nix (flakes)
+nix run github:yatoub/susshi
 ```
 
 For DEB/RPM packages see the [releases page](https://github.com/yatoub/susshi/releases/latest).
