@@ -1200,7 +1200,7 @@
 <li><code>ssh</code> client installed (<code>openssh-client</code> / <code>openssh</code>)</li>
 </ul>
 <h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
-<div class="tabbed-set tabbed-alternate" data-tabs="1:8"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><input id="__tabbed_1_6" name="__tabbed_1" type="radio" /><input id="__tabbed_1_7" name="__tabbed_1" type="radio" /><input id="__tabbed_1_8" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Arch Linux</label><label for="__tabbed_1_2">Linux (binary)</label><label for="__tabbed_1_3">Linux (musl / static)</label><label for="__tabbed_1_4">macOS (Apple Silicon)</label><label for="__tabbed_1_5">macOS (Intel)</label><label for="__tabbed_1_6">Cargo</label><label for="__tabbed_1_7">DEB / RPM</label><label for="__tabbed_1_8">NixOS / Nix (flakes)</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:10"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><input id="__tabbed_1_6" name="__tabbed_1" type="radio" /><input id="__tabbed_1_7" name="__tabbed_1" type="radio" /><input id="__tabbed_1_8" name="__tabbed_1" type="radio" /><input id="__tabbed_1_9" name="__tabbed_1" type="radio" /><input id="__tabbed_1_10" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Arch Linux</label><label for="__tabbed_1_2">Linux (binary)</label><label for="__tabbed_1_3">Linux (musl / static)</label><label for="__tabbed_1_4">macOS (Apple Silicon)</label><label for="__tabbed_1_5">macOS (Intel)</label><label for="__tabbed_1_6">Cargo</label><label for="__tabbed_1_7">Debian / Ubuntu (APT)</label><label for="__tabbed_1_8">Fedora / RHEL (DNF)</label><label for="__tabbed_1_9">DEB / RPM (one-off)</label><label for="__tabbed_1_10">NixOS / Nix (flakes)</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>paru<span class="w"> </span>-S<span class="w"> </span>susshi-bin
@@ -1231,38 +1231,59 @@
 </code></pre></div>
 </div>
 <div class="tabbed-block">
+<p>Adds a repo so <code>apt upgrade</code> picks up new releases automatically:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>curl<span class="w"> </span>-fsSL<span class="w"> </span>https://yatoub.github.io/susshi/apt-pubkey.asc<span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>gpg<span class="w"> </span>--dearmor<span class="w"> </span>-o<span class="w"> </span>/usr/share/keyrings/susshi.gpg
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;deb [signed-by=/usr/share/keyrings/susshi.gpg] https://yatoub.github.io/susshi/apt stable main&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/apt/sources.list.d/susshi.list
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>sudo<span class="w"> </span>apt<span class="w"> </span>update<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>susshi
+</code></pre></div></p>
+</div>
+<div class="tabbed-block">
+<p>Adds a repo so <code>dnf upgrade</code> picks up new releases automatically:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>sudo<span class="w"> </span>rpm<span class="w"> </span>--import<span class="w"> </span>https://yatoub.github.io/susshi/apt-pubkey.asc
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>sudo<span class="w"> </span>tee<span class="w"> </span>/etc/yum.repos.d/susshi.repo<span class="w"> </span><span class="s">&lt;&lt;&#39;REPO&#39;</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="s">[susshi]</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="s">name=Susshi</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="s">baseurl=https://yatoub.github.io/susshi/rpm</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="s">enabled=1</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="s">gpgcheck=1</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="s">gpgkey=https://yatoub.github.io/susshi/apt-pubkey.asc</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="s">REPO</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>susshi
+</code></pre></div></p>
+</div>
+<div class="tabbed-block">
 <p>Download from the <a href="https://github.com/yatoub/susshi/releases/latest">releases page</a>.</p>
 </div>
 <div class="tabbed-block">
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>nix<span class="w"> </span>run<span class="w"> </span>github:yatoub/susshi
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>nix<span class="w"> </span>run<span class="w"> </span>github:yatoub/susshi
 </code></pre></div>
 <p>Or add it as a flake input to your NixOS/home-manager config:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>inputs<span class="o">.</span>susshi<span class="o">.</span><span class="ss">url</span> <span class="o">=</span> <span class="s2">&quot;github:yatoub/susshi&quot;</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>inputs<span class="o">.</span>susshi<span class="o">.</span><span class="ss">url</span> <span class="o">=</span> <span class="s2">&quot;github:yatoub/susshi&quot;</span><span class="p">;</span>
 </code></pre></div></p>
 </div>
 </div>
 </div>
 <p>Verify:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>susshi<span class="w"> </span>--version
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>susshi<span class="w"> </span>--version
 </code></pre></div>
 <h2 id="create-your-first-inventory">Create your first inventory<a class="headerlink" href="#create-your-first-inventory" title="Permanent link">&para;</a></h2>
 <p>Create <code>~/.susshi.yml</code>:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">defaults</span><span class="p">:</span>
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-user&quot;</span>
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">ssh_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;~/.ssh/id_ed25519&quot;</span>
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
-<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="nt">groups</span><span class="p">:</span>
-<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">Servers&quot;</span>
-<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="nt">servers</span><span class="p">:</span>
-<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;web-01&quot;</span>
-<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">        </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;192.168.1.10&quot;</span>
-<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">        </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;direct&quot;</span>
-<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;db-01&quot;</span>
-<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">        </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;192.168.1.20&quot;</span>
-<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">        </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;direct&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">defaults</span><span class="p">:</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;your-user&quot;</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">ssh_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;~/.ssh/id_ed25519&quot;</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="nt">groups</span><span class="p">:</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;My</span><span class="nv"> </span><span class="s">Servers&quot;</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="nt">servers</span><span class="p">:</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;web-01&quot;</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">        </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;192.168.1.10&quot;</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">        </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;direct&quot;</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;db-01&quot;</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">        </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;192.168.1.20&quot;</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">        </span><span class="nt">mode</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;direct&quot;</span>
 </code></pre></div>
 <h2 id="launch-the-tui">Launch the TUI<a class="headerlink" href="#launch-the-tui" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>susshi
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>susshi
 </code></pre></div>
 <p>You'll see your server list. Navigate with <code>j</code>/<code>k</code>, press <code>Enter</code> to connect, <code>/</code> to search.</p>
 <h2 id="essential-keybindings">Essential keybindings<a class="headerlink" href="#essential-keybindings" title="Permanent link">&para;</a></h2>
@@ -1317,10 +1338,10 @@
 </tbody>
 </table>
 <h2 id="one-shot-connection-no-tui">One-shot connection (no TUI)<a class="headerlink" href="#one-shot-connection-no-tui" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>susshi<span class="w"> </span>--direct<span class="w"> </span>your-user@192.168.1.10
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>susshi<span class="w"> </span>--direct<span class="w"> </span>your-user@192.168.1.10
 </code></pre></div>
 <h2 id="validate-your-config">Validate your config<a class="headerlink" href="#validate-your-config" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>susshi<span class="w"> </span>--validate
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>susshi<span class="w"> </span>--validate
 </code></pre></div>
 <p>Checks YAML syntax, variable resolution, and SSH key existence without opening a connection.</p>
 <h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
