@@ -25,5 +25,24 @@ jobs:
       - name: Install MkDocs Material
         run: pip install mkdocs-material pillow cairosvg
 
-      - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force
+      - name: Build site
+        run: mkdocs build --site-dir _site
+
+      # gh-pages also hosts the APT/RPM repos under /apt and /rpm (published
+      # by release.yml), so we sync the built docs in place instead of
+      # force-pushing the whole branch, which would wipe them out.
+      - name: Sync to gh-pages (preserve /apt and /rpm)
+        run: |
+          git fetch origin gh-pages
+          git worktree add gh-pages-checkout origin/gh-pages
+          rsync -a --delete --exclude='/apt' --exclude='/rpm' --exclude='/.git' _site/ gh-pages-checkout/
+          cd gh-pages-checkout
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to deploy"
+            exit 0
+          fi
+          git commit -m "docs: deploy ${{ github.sha }}"
+          git push origin HEAD:gh-pages

@@ -74,9 +74,26 @@ paru -S susshi-bin
 
 # NixOS / Nix (flakes)
 nix run github:yatoub/susshi
+
+# Debian / Ubuntu (APT repo, auto-updates via apt upgrade)
+curl -fsSL https://yatoub.github.io/susshi/apt-pubkey.asc | sudo gpg --dearmor -o /usr/share/keyrings/susshi.gpg
+echo "deb [signed-by=/usr/share/keyrings/susshi.gpg] https://yatoub.github.io/susshi/apt stable main" | sudo tee /etc/apt/sources.list.d/susshi.list
+sudo apt update && sudo apt install susshi
+
+# Fedora / RHEL (DNF/YUM repo, auto-updates via dnf upgrade)
+sudo rpm --import https://yatoub.github.io/susshi/apt-pubkey.asc
+sudo tee /etc/yum.repos.d/susshi.repo <<'REPO'
+[susshi]
+name=Susshi
+baseurl=https://yatoub.github.io/susshi/rpm
+enabled=1
+gpgcheck=1
+gpgkey=https://yatoub.github.io/susshi/apt-pubkey.asc
+REPO
+sudo dnf install susshi
 ```
 
-For DEB/RPM packages see the [releases page](https://github.com/yatoub/susshi/releases/latest).
+For one-off DEB/RPM downloads see the [releases page](https://github.com/yatoub/susshi/releases/latest).
 
 > **Windows:** partial support — TUI and config parsing work, interactive SSH (PTY) and Wallix are Unix-only.
 
