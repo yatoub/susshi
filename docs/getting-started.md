@@ -50,6 +50,16 @@ Get up and running with susshi in under 5 minutes.
 === "DEB / RPM"
     Download from the [releases page](https://github.com/yatoub/susshi/releases/latest).
 
+=== "NixOS / Nix (flakes)"
+    ```bash
+    nix run github:yatoub/susshi
+    ```
+
+    Or add it as a flake input to your NixOS/home-manager config:
+    ```nix
+    inputs.susshi.url = "github:yatoub/susshi";
+    ```
+
 Verify:
 
 ```bash

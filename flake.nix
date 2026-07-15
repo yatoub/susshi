@@ -22,6 +22,11 @@
             lockFile = ./Cargo.lock;
           };
 
+          # Unit tests are exercised by the "Tests" CI job; skip them here since
+          # some rely on FHS paths (e.g. /usr/bin/true) unavailable in the Nix
+          # build sandbox.
+          doCheck = false;
+
           nativeBuildInputs = [ pkgs.pkg-config ];
           buildInputs = [ pkgs.openssl ]
             ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
