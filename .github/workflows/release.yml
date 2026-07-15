@@ -210,7 +210,7 @@ jobs:
       contents: write
     steps:
       - name: Download DEBs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.3
         with:
           name: debs
           path: debs
@@ -363,7 +363,7 @@ jobs:
       contents: write
     steps:
       - name: Download RPMs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.3
         with:
           name: rpms
           path: rpms
