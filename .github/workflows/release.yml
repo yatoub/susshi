@@ -188,6 +188,89 @@ jobs:
           tag: ${{ github.event.inputs.tag || github.ref }}
           overwrite: true
 
+      - name: Upload DEBs as artifact (for APT repo publish)
+        uses: actions/upload-artifact@v4
+        with:
+          name: debs
+          path: target/debian/susshi_*.deb
+          retention-days: 1
+
+  # ── APT repository (gh-pages) ─────────────────────────────────────────────
+
+  publish-apt:
+    name: Publish APT repository
+    runs-on: ubuntu-latest
+    needs: [build-deb]
+    if: github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - name: Download DEBs
+        uses: actions/download-artifact@v4
+        with:
+          name: debs
+          path: debs
+
+      - name: Install aptly and GPG
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y aptly gnupg
+
+      - name: Import signing key
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: |
+          echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
+          KEYID=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec/ {print $5; exit}')
+          echo "KEYID=$KEYID" >> "$GITHUB_ENV"
+
+      - name: Checkout gh-pages /apt state
+        uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          path: gh-pages-checkout
+
+      - name: Build APT repo with aptly
+        run: |
+          mkdir -p ~/.aptly
+          if [ -d gh-pages-checkout/apt/db ]; then
+            cp -r gh-pages-checkout/apt/db ~/.aptly/db
+            cp -r gh-pages-checkout/apt/pool ~/.aptly/pool
+          fi
+
+          aptly repo create -distribution=stable -component=main susshi || true
+          aptly repo add susshi debs/*.deb
+
+          if aptly publish list | grep -q stable; then
+            aptly publish update -gpg-key="$KEYID" -batch stable
+          else
+            aptly publish repo -gpg-key="$KEYID" -batch -distribution=stable susshi
+          fi
+
+      - name: Sync published repo into gh-pages
+        run: |
+          rm -rf gh-pages-checkout/apt
+          mkdir -p gh-pages-checkout/apt
+          cp -r ~/.aptly/public/* gh-pages-checkout/apt/
+          mkdir -p gh-pages-checkout/apt/db gh-pages-checkout/apt/pool
+          cp -r ~/.aptly/db/* gh-pages-checkout/apt/db/
+          cp -r ~/.aptly/pool/* gh-pages-checkout/apt/pool/
+
+      - name: Commit and push to gh-pages
+        working-directory: gh-pages-checkout
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apt
+          if git diff --cached --quiet; then
+            echo "No changes to publish"
+            exit 0
+          fi
+          git commit -m "chore(apt): publish $TAG"
+          git push origin HEAD:gh-pages
+
   # ── RPM package (Fedora) ──────────────────────────────────────────────────
 
   build-rpm:

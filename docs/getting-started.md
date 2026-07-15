@@ -47,7 +47,15 @@ Get up and running with susshi in under 5 minutes.
     cargo install susshi
     ```
 
-=== "DEB / RPM"
+=== "Debian / Ubuntu (APT)"
+    Adds a repo so `apt upgrade` picks up new releases automatically:
+    ```bash
+    curl -fsSL https://yatoub.github.io/susshi/apt-pubkey.asc | sudo gpg --dearmor -o /usr/share/keyrings/susshi.gpg
+    echo "deb [signed-by=/usr/share/keyrings/susshi.gpg] https://yatoub.github.io/susshi/apt stable main" | sudo tee /etc/apt/sources.list.d/susshi.list
+    sudo apt update && sudo apt install susshi
+    ```
+
+=== "DEB / RPM (one-off)"
     Download from the [releases page](https://github.com/yatoub/susshi/releases/latest).
 
 === "NixOS / Nix (flakes)"
