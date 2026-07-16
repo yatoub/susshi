@@ -22,6 +22,7 @@ jobs:
   release-plz:
     name: Run release-plz
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # Do NOT cancel in progress: two concurrent runs can corrupt the release state.
     concurrency:
       group: release-plz-${{ github.ref }}
@@ -40,7 +41,7 @@ jobs:
 
       - name: Run release-plz
         id: release-plz
-        uses: release-plz/action@v0.5
+        uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9  # v0.5
         env:
           # Must be a PAT, not GITHUB_TOKEN: GitHub will not fire workflow events
           # (i.e. release.yml) for tag pushes made with the built-in token.

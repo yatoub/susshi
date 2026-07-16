@@ -40,6 +40,7 @@ jobs:
   preflight:
     name: Preflight
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions: {}
     outputs:
       skip: ${{ steps.gate.outputs.skip }}
@@ -61,6 +62,7 @@ jobs:
   lint:
     name: Lint (fmt + clippy)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [preflight]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -86,6 +88,7 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [preflight, lint]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -108,6 +111,7 @@ jobs:
   deny:
     name: Security (cargo deny)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [preflight]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -122,6 +126,7 @@ jobs:
   msrv:
     name: MSRV (Rust 1.88)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [preflight]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -144,6 +149,7 @@ jobs:
   nix:
     name: Nix flake
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [preflight]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -158,6 +164,12 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
+      - name: Cache Nix store
+        uses: nix-community/cache-nix-action@v6
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock', 'flake.nix', 'Cargo.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+
       - name: Check flake
         run: nix flake check --print-build-logs
 
@@ -167,6 +179,7 @@ jobs:
   megalinter:
     name: MegaLinter
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [preflight]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -188,6 +201,7 @@ jobs:
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [preflight, test]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -226,6 +240,7 @@ jobs:
   cross-platform:
     name: Build — ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
     needs: [preflight, test]
     if: needs.preflight.outputs.skip != 'true'
     permissions:
@@ -257,44 +272,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        uses: ./.github/actions/build-target
         with:
-          targets: ${{ matrix.target }}
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ matrix.target }}
-
-      - name: Install Linux build deps
-        if: contains(matrix.target, 'unknown-linux')
-        shell: bash
-        env:
-          TARGET: ${{ matrix.target }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pkg-config libssl-dev
-          if [[ "$TARGET" == *musl* ]]; then
-            sudo apt-get install -y musl-tools
-          fi
-
-      - name: Set OpenSSL paths (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          "OPENSSL_DIR=C:\Strawberry\c" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "OPENSSL_STATIC=1" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - name: Build (system OpenSSL)
-        if: matrix.openssl_mode == 'system'
-        env:
-          OPENSSL_NO_VENDOR: "1"
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Build (vendored OpenSSL)
-        if: matrix.openssl_mode == 'vendored'
-        run: cargo build --release --features openssl-vendored --target ${{ matrix.target }}
+          target: ${{ matrix.target }}
+          openssl-mode: ${{ matrix.openssl_mode }}
 
       - name: Run tests (Linux native only)
         if: matrix.target == 'x86_64-unknown-linux-gnu'
