@@ -1,18 +1,18 @@
 Package: susshi
 Priority: optional
 Section: net
-Installed-Size: 7740
+Installed-Size: 7736
 Maintainer: yatoub <yatoub@users.noreply.github.com>
 Architecture: arm64
 Version: 0.20.0-1
 Depends: openssh-client
 Recommends: xclip | xdotool
 Filename: pool/main/s/susshi/susshi_0.20.0-1_arm64.deb
-Size: 3307176
-MD5sum: 56c9e003e9e9324ad3fc0eb05e977e86
-SHA1: 8df9b38b0a153b9df8e84603f82703697ec67499
-SHA256: 96c8650a82b93b7950ad0113f407c05a6efb9d8292471b71121d97002f86d0dd
-SHA512: 2a5c1e9e446a84afa12a750934dc9de34d5e8a0f6f5db860c705a140312bb1b61a92391555affeceeb8a98947eb143fef55f95ac2c82f310ecb9ff75a5c8130c
+Size: 3305408
+MD5sum: 729be5d90bfb0441f796b85a2fbd6baa
+SHA1: 7cafb5fe416685c4e20ddce2760588b0abbbebf7
+SHA256: 288313e4ace69da40af502fdeb7a8aaa0c7cf5fbfdf4020282b102530dd6c399
+SHA512: bd36a171a9b98aa943a14bef8f41d6ddddbc2726524c1b43e3ca628f32dd3a5491e3f1f0673a36f68547fa2a50a53b73627fd1f3a2b07436795ba6c2c577ddd2
 Description: Terminal SSH manager with YAML inventories, multi-hop jump hosts, Wallix
  bastion, tunnels, SCP, and Catppuccin TUI
  susshi is a modern, terminal-based SSH connection manager with TUI (ratatui +
