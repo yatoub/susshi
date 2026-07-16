@@ -191,7 +191,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [build-deb]
-    if: github.event_name == 'push'
+    # Also run on a manual re-publish (workflow_dispatch): that's precisely
+    # how a broken .deb already served by the APT repo gets fixed.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     concurrency:
       group: gh-pages-apt
       cancel-in-progress: false
@@ -367,7 +369,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [build-rpm]
-    if: github.event_name == 'push'
+    # Also run on a manual re-publish (workflow_dispatch): that's precisely
+    # how a broken RPM already served by the repo gets fixed.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     concurrency:
       group: gh-pages-rpm
       cancel-in-progress: false
