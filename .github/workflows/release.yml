@@ -235,7 +235,10 @@ jobs:
           fi
 
           aptly repo create -distribution=stable -component=main susshi || true
-          aptly repo add susshi debs/*.deb
+          # -force-replace: re-publishing the same version (e.g. a workflow_dispatch
+          # re-run to fix a broken build) must overwrite the existing package
+          # instead of erroring out with "conflict in package".
+          aptly repo add -force-replace susshi debs/*.deb
 
           if aptly publish list | grep -q stable; then
             aptly publish update -gpg-key="$KEYID" -batch stable
@@ -255,7 +258,7 @@ jobs:
       - name: Commit and push to gh-pages
         working-directory: gh-pages-checkout
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -271,10 +274,11 @@ jobs:
         if: failure()
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           gh issue create \
+            --repo "${{ github.repository }}" \
             --title "APT repo publish failed for $TAG" \
             --label "ci-failure" \
             --body "publish-apt failed on release $TAG. Run: $RUN_URL"
@@ -433,7 +437,7 @@ jobs:
       - name: Commit and push to gh-pages
         working-directory: gh-pages-checkout
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -449,10 +453,11 @@ jobs:
         if: failure()
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           gh issue create \
+            --repo "${{ github.repository }}" \
             --title "RPM repo publish failed for $TAG" \
             --label "ci-failure" \
             --body "publish-rpm failed on release $TAG. Run: $RUN_URL"
