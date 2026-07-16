@@ -99,6 +99,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           gh issue create \
+            --repo "${{ github.repository }}" \
             --title "AUR publish (susshi) failed for ${TAG:-unknown}" \
             --label "ci-failure" \
             --body "aur-source failed. Run: $RUN_URL"
@@ -184,6 +185,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           gh issue create \
+            --repo "${{ github.repository }}" \
             --title "AUR publish (susshi-bin) failed for ${TAG:-unknown}" \
             --label "ci-failure" \
             --body "aur-bin failed. Run: $RUN_URL"

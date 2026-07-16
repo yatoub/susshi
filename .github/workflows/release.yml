@@ -162,10 +162,11 @@ jobs:
           platforms: arm64
 
       - name: Smoke test (arm64, via QEMU)
+        # Pinned by digest (debian:bookworm-slim as of this pin) for reproducibility.
         run: |
           docker run --rm --platform linux/arm64 \
             -v "${{ github.workspace }}/target/debian:/debs:ro" \
-            debian:bookworm-slim \
+            debian@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 \
             bash -c "apt-get update && apt-get install -y /debs/susshi_*_arm64.deb && susshi --version"
 
       - name: Upload to GitHub Release
@@ -208,9 +209,12 @@ jobs:
           path: debs
 
       - name: Install aptly and GPG
+        # aptly version pinned: its -force-replace/-force-overwrite semantics
+        # (relied on by the publish step below) were discovered the hard way —
+        # an unpinned apt-get upgrade could silently change that behavior again.
         run: |
           sudo apt-get update
-          sudo apt-get install -y aptly gnupg
+          sudo apt-get install -y aptly=1.5.0+ds1-2ubuntu0.24.04.3 gnupg
 
       - name: Import signing key
         env:
@@ -293,6 +297,64 @@ jobs:
             --title "APT repo publish failed for $TAG" \
             --label "ci-failure" \
             --body "publish-apt failed on release $TAG. Run: $RUN_URL"
+
+  # ── APT repo smoke test ───────────────────────────────────────────────────
+  #
+  # Verifies a real client can install from the just-published repo, not just
+  # that `git push` succeeded. This class of bug (wrong glibc baseline, a
+  # stale pool/ file never actually refreshed, a missing runtime dependency)
+  # previously only surfaced when someone manually tested `apt install` on a
+  # VM after the fact. GitHub Pages/its CDN can take a few minutes to fully
+  # propagate a push, so installation is retried with backoff before failing.
+
+  smoke-test-apt:
+    name: Smoke test — apt install
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [publish-apt]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Install susshi from the published APT repo (retry for CDN propagation delay)
+        run: |
+          cat > smoke-test.sh <<'SCRIPT'
+          set -e
+          apt-get update
+          apt-get install -y curl gnupg
+          curl -fsSL https://yatoub.github.io/susshi/apt-pubkey.asc | gpg --dearmor -o /usr/share/keyrings/susshi.gpg
+          echo "deb [signed-by=/usr/share/keyrings/susshi.gpg] https://yatoub.github.io/susshi/apt stable main" > /etc/apt/sources.list.d/susshi.list
+          apt-get update
+          apt-get install -y susshi
+          susshi --version
+          SCRIPT
+
+          for attempt in 1 2 3 4 5; do
+            if docker run --rm \
+                -v "${{ github.workspace }}/smoke-test.sh:/smoke-test.sh:ro" \
+                debian@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818 \
+                bash /smoke-test.sh; then
+              exit 0
+            fi
+            echo "Attempt $attempt failed, retrying in 60s..."
+            sleep 60
+          done
+          echo "::error::susshi failed to install from the APT repo after 5 attempts"
+          exit 1
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "APT repo smoke test failed for $TAG" \
+            --label "ci-failure" \
+            --body "A fresh 'apt install susshi' from the published repo failed for $TAG. Run: $RUN_URL"
 
   # ── RPM package (Fedora) ──────────────────────────────────────────────────
 
@@ -401,9 +463,11 @@ jobs:
           path: rpms
 
       - name: Install createrepo_c and GPG
+        # createrepo-c version pinned to avoid silent behavior drift, same
+        # reasoning as aptly's pin in publish-apt.
         run: |
           sudo apt-get update
-          sudo apt-get install -y createrepo-c gnupg rpm
+          sudo apt-get install -y createrepo-c=0.17.3-2ubuntu3 gnupg rpm
 
       - name: Import signing key
         env:
@@ -473,6 +537,61 @@ jobs:
             --label "ci-failure" \
             --body "publish-rpm failed on release $TAG. Run: $RUN_URL"
 
+  # ── RPM repo smoke test ───────────────────────────────────────────────────
+  # Same rationale as smoke-test-apt above.
+
+  smoke-test-rpm:
+    name: Smoke test — dnf install
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [publish-rpm]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Install susshi from the published RPM repo (retry for CDN propagation delay)
+        run: |
+          cat > smoke-test.sh <<'SCRIPT'
+          set -e
+          cat > /etc/yum.repos.d/susshi.repo <<'REPO'
+          [susshi]
+          name=Susshi
+          baseurl=https://yatoub.github.io/susshi/rpm
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://yatoub.github.io/susshi/apt-pubkey.asc
+          REPO
+          dnf install -y susshi
+          susshi --version
+          SCRIPT
+
+          for attempt in 1 2 3 4 5; do
+            if docker run --rm \
+                -v "${{ github.workspace }}/smoke-test.sh:/smoke-test.sh:ro" \
+                fedora:41 \
+                bash /smoke-test.sh; then
+              exit 0
+            fi
+            echo "Attempt $attempt failed, retrying in 60s..."
+            sleep 60
+          done
+          echo "::error::susshi failed to install from the RPM repo after 5 attempts"
+          exit 1
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "RPM repo smoke test failed for $TAG" \
+            --label "ci-failure" \
+            --body "A fresh 'dnf install susshi' from the published repo failed for $TAG. Run: $RUN_URL"
+
   # ── Arch Linux PKGBUILD (committed to repo) ───────────────────────────────
 
   update-pkgbuild:
@@ -497,11 +616,14 @@ jobs:
         run: bash scripts/update-pkgbuild.sh
 
       - name: Regenerate .SRCINFO
+        # Pinned by digest (archlinux:latest as of this pin) so the base image
+        # itself can't change unnoticed; `pacman -Sy` below still always pulls
+        # current package versions from the mirrors regardless of this pin.
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/pkg" \
             -w /pkg \
-            archlinux:latest \
+            archlinux@sha256:fe6972d4dc1f660c0c10f4c41b2de8986bab89e7e2955378f8beadb8ebcd7433 \
             bash -c "
               pacman -Sy --noconfirm base-devel > /dev/null 2>&1
               useradd -m builder
@@ -534,6 +656,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           gh issue create \
+            --repo "${{ github.repository }}" \
             --title "PKGBUILD update failed for $TAG" \
             --label "ci-failure" \
             --body "update-pkgbuild failed on release $TAG. Run: $RUN_URL"
