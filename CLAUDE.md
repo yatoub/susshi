@@ -93,7 +93,7 @@ release.yml       tag push → build binaries + DEB + RPM → update-pkgbuild co
 aur-publish.yml   after release.yml → push susshi + susshi-bin to AUR
 ```
 
-**release-plz uses a PAT (`RELEASE_PLZ_TOKEN`)**, not the built-in `GITHUB_TOKEN` — this is required so the tag it pushes triggers `release.yml`. It acts as the repo owner, not as a bot account.
+**release-plz uses a PAT (`RELEASE_PLZ_TOKEN`)**, not the built-in `GITHUB_TOKEN` — this is required so the tag it pushes triggers `release.yml`. It acts as the repo owner, not as a bot account. See [.github/SECRETS.md](.github/SECRETS.md) for rotation procedures for this and other repo secrets (`APT_GPG_PRIVATE_KEY`, etc).
 
 **Release PR branches** are named `release-plz-<timestamp>`. The CI `preflight` job detects this pattern and skips the full suite (version-bump PRs contain no code change).
 
