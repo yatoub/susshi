@@ -295,14 +295,20 @@ jobs:
       - name: Install build dependencies
         run: dnf install -y rust cargo openssl-devel zlib-devel pkgconf-pkg-config rpm-build rpmdevtools git
 
-      - name: Cache Cargo registry and build artifacts
+      # Only the Cargo registry is cached, not the build's target/ dir: build.rs
+      # writes the man page to a path relative to the source checkout (not
+      # CARGO_TARGET_DIR), which rpmbuild re-extracts fresh on every run at a
+      # deterministic path. Caching target/ across runs let cargo see a fingerprint
+      # match and skip re-running build.rs, silently omitting the man page from
+      # the fresh checkout (surfaced when re-running release.yml for the same tag
+      # with an unchanged Cargo.lock — an exact cache-key hit).
+      - name: Cache Cargo registry
         uses: actions/cache@v6
         with:
           path: |
             /github/home/.cargo/registry/index
             /github/home/.cargo/registry/cache
             /github/home/.cargo/git/db
-            /github/home/cargo-target
           key: fedora-rpm-x86_64-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             fedora-rpm-x86_64-
@@ -323,7 +329,6 @@ jobs:
         env:
           OPENSSL_NO_VENDOR: "1"
           LIBZ_SYS_USE_PKG_CONFIG: "1"
-          CARGO_TARGET_DIR: /github/home/cargo-target
         run: rpmbuild -ba susshi.spec
 
       - name: Smoke test
