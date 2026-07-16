@@ -241,7 +241,12 @@ jobs:
           aptly repo add -force-replace susshi debs/*.deb
 
           if aptly publish list | grep -q stable; then
-            aptly publish update -gpg-key="$KEYID" -batch stable
+            # -force-overwrite: repo add -force-replace only swaps the package in
+            # aptly's local repo metadata. Without this flag, `publish update` still
+            # leaves the already-published pool/ file untouched when the
+            # version+arch key is unchanged, silently serving stale package bytes
+            # even though the Packages index now describes the new one.
+            aptly publish update -force-overwrite -gpg-key="$KEYID" -batch stable
           else
             aptly publish repo -gpg-key="$KEYID" -batch -distribution=stable susshi
           fi
