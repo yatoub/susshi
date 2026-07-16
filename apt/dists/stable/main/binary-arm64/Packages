@@ -8,11 +8,11 @@ Version: 0.20.0-1
 Depends: openssh-client
 Recommends: xclip | xdotool
 Filename: pool/main/s/susshi/susshi_0.20.0-1_arm64.deb
-Size: 3305408
-MD5sum: 729be5d90bfb0441f796b85a2fbd6baa
-SHA1: 7cafb5fe416685c4e20ddce2760588b0abbbebf7
-SHA256: 288313e4ace69da40af502fdeb7a8aaa0c7cf5fbfdf4020282b102530dd6c399
-SHA512: bd36a171a9b98aa943a14bef8f41d6ddddbc2726524c1b43e3ca628f32dd3a5491e3f1f0673a36f68547fa2a50a53b73627fd1f3a2b07436795ba6c2c577ddd2
+Size: 3305884
+MD5sum: 37657a93d2c4780f4367eb8d69f8989d
+SHA1: 6b1ea312036e882d200be8092a023a178699c8c0
+SHA256: b05f918a7df57a1f755558b1c248afb5f6b077870ba07bf9ef17f7c3ccdb0647
+SHA512: f25699bb0cd34c37485e547d7e4f4d292e606e5d48a9c91fda96916352c4c1b44bc21d833d25d3414c8a0145a49037a0b99369eae6eeceedeb77654476a147d9
 Description: Terminal SSH manager with YAML inventories, multi-hop jump hosts, Wallix
  bastion, tunnels, SCP, and Catppuccin TUI
  susshi is a modern, terminal-based SSH connection manager with TUI (ratatui +
