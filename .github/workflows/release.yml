@@ -166,7 +166,7 @@ jobs:
           docker run --rm --platform linux/arm64 \
             -v "${{ github.workspace }}/target/debian:/debs:ro" \
             debian:bookworm-slim \
-            bash -c "dpkg -i /debs/susshi_*_arm64.deb && susshi --version"
+            bash -c "apt-get update && apt-get install -y /debs/susshi_*_arm64.deb && susshi --version"
 
       - name: Upload to GitHub Release
         uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de  # v2
