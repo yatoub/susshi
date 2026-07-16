@@ -249,7 +249,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # ubuntu-22.04 (not -latest) to match release.yml's glibc-compat
+          # build environment — see the comment there for why.
+          - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             openssl_mode: system
           - os: ubuntu-latest
@@ -264,7 +266,7 @@ jobs:
           - os: macos-14
             target: aarch64-apple-darwin
             openssl_mode: system
-          - os: ubuntu-24.04-arm
+          - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
             openssl_mode: system
 

@@ -41,7 +41,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # Built on an older Ubuntu LTS (older glibc) so the resulting binary
+          # runs on older distros too: glibc is forward-compatible only, so a
+          # binary linked against ubuntu-latest's glibc (24.04 -> 2.39) fails
+          # with "GLIBC_2.39 not found" on e.g. Debian 12 (glibc 2.36).
+          - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             binary_name: susshi
             asset_name: susshi-linux-x86_64
@@ -61,7 +65,8 @@ jobs:
             binary_name: susshi
             asset_name: susshi-macos-apple-silicon
             openssl_mode: system
-          - os: ubuntu-24.04-arm
+          # Same glibc-compat reasoning as the x86_64-unknown-linux-gnu entry above.
+          - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
             binary_name: susshi
             asset_name: susshi-linux-aarch64
@@ -101,7 +106,11 @@ jobs:
 
   build-deb:
     name: DEB packages
-    runs-on: ubuntu-latest
+    # ubuntu-22.04 (older glibc) so the amd64 .deb runs on older glibc distros
+    # (e.g. Debian 12 ships glibc 2.36, ubuntu-latest/24.04 links against 2.39).
+    # The arm64 .deb is cross-compiled via `cross`'s own Docker image, so its
+    # glibc baseline is unaffected by the host runner OS.
+    runs-on: ubuntu-22.04
     timeout-minutes: 50
     permissions:
       contents: write
