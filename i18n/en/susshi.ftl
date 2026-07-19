@@ -246,3 +246,15 @@ help-pin = Pin / unpin server (split pane)
 help-help = Show / hide this help
 help-goto-top-bottom = Go to top / bottom of list
 help-page = Previous / next page
+
+# ── First-run wizard ──────────────────────────────────────────────────────────
+wizard-title = 👋 Welcome — let's add your first server
+wizard-field-group = Group name:
+wizard-field-server = Server name:
+wizard-field-host = Host:
+wizard-field-user = User (optional):
+wizard-hint = Tab: next field · Enter: create · Esc: skip (start with an empty config)
+wizard-error-group-name = Group name is required
+wizard-error-server-name = Server name is required
+wizard-error-host = Host is required
+wizard-created = ~/.susshi.yml created — welcome aboard!

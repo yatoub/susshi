@@ -94,6 +94,7 @@ impl App {
             overview: None,
             overview_rx: None,
             mouse_capture: true,
+            wizard_state: WizardState::Idle,
         };
 
         app.list_state.select(Some(0));

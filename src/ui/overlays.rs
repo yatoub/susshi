@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::app::{
     App, AppMode, ConfigItem, ScpFormField, ScpState, TunnelFormField, TunnelOverlayState,
-    WallixSelectorState,
+    WallixSelectorState, WizardField, WizardState,
 };
 use crate::fl;
 use crate::ssh::sftp::ScpDirection;
@@ -965,4 +965,101 @@ pub(crate) fn draw_overview_overlay(f: &mut Frame, app: &App, area: Rect) {
         .collect();
 
     f.render_widget(Paragraph::new(lines), inner);
+}
+
+/// Overlay du wizard de première configuration — formulaire 4 champs
+/// (groupe, serveur, hôte, utilisateur), même style que `draw_scp_form`.
+pub(crate) fn draw_wizard_overlay(f: &mut Frame, app: &mut App, area: Rect) {
+    let (form, focus, error) = match &app.wizard_state {
+        WizardState::Form { form, focus, error } => (form.clone(), *focus, error.clone()),
+        WizardState::Idle => return,
+    };
+
+    let popup_h: u16 = 10;
+    let popup_w: u16 = 64.min(area.width.saturating_sub(4));
+    let popup_area = centered_rect(popup_w, popup_h, area);
+
+    f.render_widget(Clear, popup_area);
+
+    let block = Block::default()
+        .title(fl!("wizard-title"))
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(Style::default().fg(app.theme.sapphire))
+        .style(Style::default().bg(app.theme.bg));
+
+    let inner = block.inner(popup_area);
+    f.render_widget(block, popup_area);
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .split(inner);
+
+    let label_group = fl!("wizard-field-group");
+    let label_server = fl!("wizard-field-server");
+    let label_host = fl!("wizard-field-host");
+    let label_user = fl!("wizard-field-user");
+
+    let fields: &[(&str, &str, WizardField)] = &[
+        (&label_group, &form.group_name, WizardField::GroupName),
+        (&label_server, &form.server_name, WizardField::ServerName),
+        (&label_host, &form.host, WizardField::Host),
+        (&label_user, &form.user, WizardField::User),
+    ];
+
+    let inner_w = popup_area.width.saturating_sub(2) as usize;
+
+    for (i, (label, value, field)) in fields.iter().enumerate() {
+        let focused = *field == focus;
+        let (label_fg, value_bg, cursor) = if focused {
+            (app.theme.sapphire, app.theme.selection_bg, "█")
+        } else {
+            (app.theme.subtext0, app.theme.bg, "")
+        };
+
+        let label_w = label.chars().count();
+        let cursor_w = if focused { 1 } else { 0 };
+        let max_value_w = inner_w.saturating_sub(label_w + cursor_w);
+        let display_value: String = if value.len() > max_value_w && max_value_w > 1 {
+            format!(
+                "\u{2026}{}",
+                &value[value.len().saturating_sub(max_value_w.saturating_sub(1))..]
+            )
+        } else {
+            value.to_string()
+        };
+
+        let line = Line::from(vec![
+            Span::styled(*label, Style::default().fg(label_fg)),
+            Span::styled(
+                format!("{}{}", display_value, cursor),
+                Style::default().fg(app.theme.fg).bg(value_bg),
+            ),
+        ]);
+        f.render_widget(Paragraph::new(line), chunks[i]);
+    }
+
+    if let Some(err) = &error {
+        f.render_widget(
+            Paragraph::new(Line::from(vec![
+                Span::styled("  ✗ ", Style::default().fg(app.theme.red)),
+                Span::styled(err.as_str(), Style::default().fg(app.theme.red)),
+            ])),
+            chunks[5],
+        );
+    }
+
+    f.render_widget(
+        Paragraph::new(fl!("wizard-hint")).style(Style::default().fg(app.theme.subtext0)),
+        chunks[6],
+    );
 }

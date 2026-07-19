@@ -15,7 +15,7 @@ Full roadmap with version history: [yatoub.github.io/susshi/roadmap/](https://ya
 ## Near-term
 
 - [ ] **Homebrew tap** — `brew install yatoub/tap/susshi` for macOS users without cargo
-- [ ] **First-run wizard** — interactive prompt to create `~/.susshi.yml` on first launch
+- [x] **First-run wizard** — interactive prompt to create `~/.susshi.yml` on first launch
 - [ ] **Connection log** — persist last-connected timestamp and last-run command per server
 - [ ] **Multi-select operations** — apply tunnels, SCP, or exec-group to several servers at once
 
