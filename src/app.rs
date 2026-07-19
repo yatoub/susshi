@@ -52,6 +52,10 @@ mod core_state;
 #[path = "app/overview.rs"]
 mod overview;
 
+#[path = "app/wizard_state.rs"]
+mod wizard_state;
+pub use wizard_state::render_group_yaml;
+
 /// Mode courant de l'application.
 #[derive(Debug, Default)]
 pub enum AppMode {
@@ -308,6 +312,57 @@ pub enum ScpState {
     Error(String),
 }
 
+/// Champ actif dans le formulaire du wizard de première configuration.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WizardField {
+    GroupName,
+    ServerName,
+    Host,
+    User,
+}
+
+impl WizardField {
+    pub fn next(self) -> Self {
+        match self {
+            Self::GroupName => Self::ServerName,
+            Self::ServerName => Self::Host,
+            Self::Host => Self::User,
+            Self::User => Self::GroupName,
+        }
+    }
+    pub fn prev(self) -> Self {
+        match self {
+            Self::GroupName => Self::User,
+            Self::ServerName => Self::GroupName,
+            Self::Host => Self::ServerName,
+            Self::User => Self::Host,
+        }
+    }
+}
+
+/// Valeurs saisies dans le formulaire du wizard.
+#[derive(Debug, Clone, Default)]
+pub struct WizardForm {
+    pub group_name: String,
+    pub server_name: String,
+    pub host: String,
+    pub user: String,
+}
+
+/// État du wizard de première configuration, déclenché quand `~/.susshi.yml`
+/// vient d'être créé pour la première fois (touche Esc pour l'ignorer et
+/// démarrer avec une config vide).
+#[derive(Debug, Default)]
+pub enum WizardState {
+    #[default]
+    Idle,
+    Form {
+        form: WizardForm,
+        focus: WizardField,
+        error: Option<String>,
+    },
+}
+
 /// Statut d'un serveur dans le dashboard overview.
 #[derive(Debug, Clone)]
 pub enum OverviewStatus {
@@ -471,6 +526,10 @@ pub struct App {
     /// Si `true`, la capture souris crossterm est active (les clics TUI fonctionnent).
     /// Si `false`, le terminal reprend la gestion souris standard (sélection texte possible).
     pub mouse_capture: bool,
+
+    /// État du wizard de première configuration (`Idle` sauf juste après la
+    /// création automatique de `~/.susshi.yml`).
+    pub wizard_state: WizardState,
 }
 
 type WallixMenuLoadResult = (ResolvedServer, Result<Vec<WallixMenuEntry>, String>);
@@ -478,6 +537,10 @@ type WallixMenuLoadResult = (ResolvedServer, Result<Vec<WallixMenuEntry>, String
 #[cfg(test)]
 #[path = "app/tests_wallix.rs"]
 mod tests_wallix;
+
+#[cfg(test)]
+#[path = "app/tests_wizard_state.rs"]
+mod tests_wizard_state;
 
 #[cfg(test)]
 #[path = "app/tests_helpers.rs"]

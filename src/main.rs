@@ -13,6 +13,7 @@ use ratatui::{Terminal, backend::CrosstermBackend, layout::Rect};
 
 use susshi::app::{
     App, AppMode, CmdState, ConfigItem, ScpState, TunnelOverlayState, WallixSelectorState,
+    WizardState,
 };
 use susshi::config::{Config, ConnectionMode, IncludeWarning, ResolvedServer, undefined_vars};
 use susshi::fl;
@@ -28,32 +29,14 @@ use susshi::ui;
 
 use susshi::Cli;
 
-// ─── Config par défaut ───────────────────────────────────────────────────────
+// ─── Config minimale de premier lancement ─────────────────────────────────────
+//
+// Écrite une fois quand ~/.susshi.yml n'existe pas encore, pour que
+// Config::load_merged ait toujours un fichier valide à lire. Le wizard
+// (touche déclenchée dans main() juste avant d'entrer en mode TUI) propose
+// ensuite d'y ajouter un premier groupe/serveur ; Esc laisse ce squelette vide.
 
-const DEFAULT_CONFIG: &str = r#"
-defaults:
-  user: "admin"
-  ssh_key: "~/.ssh/id_rsa"
-  ssh_options:
-    - "StrictHostKeyChecking=no"
-    - "UserKnownHostsFile=/dev/null"
-
-groups:
-  - name: "Example Project"
-    user: "dev"
-    environments:
-      - name: "Production"
-        servers:
-          - name: "web-01"
-            host: "192.168.1.10"
-          - name: "db-01"
-            host: "192.168.1.11"
-      - name: "Staging"
-        servers:
-          - name: "web-stg"
-            host: "192.168.1.20"
-            mode: "jump"
-"#;
+const MINIMAL_CONFIG: &str = "groups: []\n";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -526,9 +509,8 @@ fn main() -> io::Result<()> {
         run_import_ssh_config(&cli);
         // run_import_ssh_config appelle process::exit()
     }
-    if !config_path.exists()
-        && let Err(e) = std::fs::write(config_path, DEFAULT_CONFIG)
-    {
+    let is_first_run = !config_path.exists();
+    if is_first_run && let Err(e) = std::fs::write(config_path, MINIMAL_CONFIG) {
         eprintln!("Failed to create default config: {}", e);
         return Err(e);
     }
@@ -592,6 +574,10 @@ fn main() -> io::Result<()> {
     // ── Mode TUI normal ─────────────────────────────────────────────────────
     let mut app = App::new(config, warnings, config_path.to_path_buf(), val_warnings)
         .map_err(io::Error::other)?;
+
+    if is_first_run {
+        app.start_wizard();
+    }
 
     // Délai courant de backoff pour la reconnexion automatique (mode keep_open).
     // Initialisé à 0, puis remis à 0 à chaque nouvelle connexion volontaire.
@@ -883,7 +869,21 @@ fn run_app(
         if event::poll(Duration::from_millis(250))? {
             match event::read()? {
                 Event::Key(key) => {
-                    if let AppMode::CredentialInput { .. } = &app.app_mode {
+                    if !matches!(app.wizard_state, WizardState::Idle) {
+                        match key.code {
+                            KeyCode::Esc => app.wizard_cancel(),
+                            KeyCode::Enter => {
+                                if let Err(e) = app.wizard_submit() {
+                                    app.app_mode = AppMode::Error(e.to_string());
+                                }
+                            }
+                            KeyCode::Tab => app.wizard_next_field(),
+                            KeyCode::BackTab => app.wizard_prev_field(),
+                            KeyCode::Char(c) => app.wizard_push_char(c),
+                            KeyCode::Backspace => app.wizard_backspace(),
+                            _ => {}
+                        }
+                    } else if let AppMode::CredentialInput { .. } = &app.app_mode {
                         match key.code {
                             KeyCode::Esc => {
                                 app.cancel_credential_input();

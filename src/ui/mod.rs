@@ -8,7 +8,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
 };
 
-use crate::app::{App, AppMode, ScpState};
+use crate::app::{App, AppMode, ScpState, WizardState};
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -51,6 +51,12 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
 
     panels::draw_status_bar(f, app, chunks[3]);
+
+    // Overlay wizard première configuration — affiché au tout premier lancement,
+    // avant tout autre overlay (rien d'autre ne peut être actif simultanément).
+    if !matches!(app.wizard_state, WizardState::Idle) {
+        overlays::draw_wizard_overlay(f, app, f.area());
+    }
 
     // Overlay tunnels — affiché au-dessus de l'interface normale
     if app.tunnel_overlay.is_some() {
