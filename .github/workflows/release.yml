@@ -134,10 +134,15 @@ jobs:
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
 
+      # Built from source (not taiki-e/install-action's prebuilt binaries):
+      # this job runs on ubuntu-22.04 (glibc 2.36) for the amd64 .deb's
+      # glibc-compat baseline (see the runs-on comment above), but prebuilt
+      # cargo-deb releases are linked against a newer glibc (GLIBC_2.39) and
+      # fail to even run here.
       - name: Install cargo-deb and cross
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-deb,cross
+        run: |
+          cargo install cargo-deb
+          cargo install cross
 
       - name: Install system OpenSSL (amd64)
         run: |
