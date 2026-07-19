@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.21.0] — 2026-07-19
+
+### Added
+
+- Add first-run wizard to create ~/.susshi.yml on first launch ([#174](https://github.com/yatoub/susshi/pull/174))
+
+
 ## [0.20.1] — 2026-07-19
 
 ### Fixed
