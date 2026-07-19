@@ -185,7 +185,7 @@ jobs:
           overwrite: true
 
       - name: Upload DEBs as artifact (for APT repo publish)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: debs
           path: target/debian/susshi_*.deb
@@ -441,7 +441,7 @@ jobs:
           find /github/home/rpmbuild/RPMS -name "susshi-*.rpm" ! -name "*debuginfo*" ! -name "*debugsource*" -exec cp {} rpms/ \;
 
       - name: Upload RPM as artifact (for repo publish)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: rpms
           path: rpms/*.rpm
