@@ -12,6 +12,15 @@ on:
 permissions:
   contents: write
 
+# gh-pages is also written to by release.yml's publish-apt/publish-rpm jobs.
+# All three share this group so a `git push origin HEAD:gh-pages` here can
+# never race one of theirs (each syncs into its own subtree, but a
+# concurrent push to the same branch/ref is still a real race at the git
+# level).
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

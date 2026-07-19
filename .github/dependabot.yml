@@ -12,3 +12,9 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+
+  # NOTE: release.yml pins two base images by digest (debian, archlinux) in
+  # inline `docker run` commands, not in a Dockerfile/docker-compose.yml.
+  # Dependabot's "docker" ecosystem only scans Dockerfile/compose syntax, not
+  # docker-run digests embedded in workflow run: scripts, so those two pins
+  # currently have no automated update path and must be bumped by hand.

@@ -28,6 +28,12 @@ on:
 permissions:
   contents: read
 
+# A manual re-publish (workflow_dispatch) could otherwise race the run
+# triggered by the original tag push for the same tag.
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # ── Platform binaries ─────────────────────────────────────────────────────
 
@@ -129,9 +135,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-deb and cross
-        run: |
-          cargo install cargo-deb
-          cargo install cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deb,cross
 
       - name: Install system OpenSSL (amd64)
         run: |
@@ -195,15 +201,17 @@ jobs:
     # Also run on a manual re-publish (workflow_dispatch): that's precisely
     # how a broken .deb already served by the APT repo gets fixed.
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # Shared with docs.yml (which also pushes to gh-pages) so a `git push`
+    # here can never race a docs deploy at the git level.
     concurrency:
-      group: gh-pages-apt
+      group: gh-pages
       cancel-in-progress: false
     permissions:
       contents: write
       issues: write
     steps:
       - name: Download DEBs
-        uses: actions/download-artifact@v4.1.3
+        uses: actions/download-artifact@v4.1.3  # pinned: v4 < 4.1.3 has GHSA-cxww-7g56-2vh6
         with:
           name: debs
           path: debs
@@ -449,15 +457,17 @@ jobs:
     # Also run on a manual re-publish (workflow_dispatch): that's precisely
     # how a broken RPM already served by the repo gets fixed.
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # Shared with docs.yml and publish-apt (all push to gh-pages) so a
+    # `git push` here can never race another writer at the git level.
     concurrency:
-      group: gh-pages-rpm
+      group: gh-pages
       cancel-in-progress: false
     permissions:
       contents: write
       issues: write
     steps:
       - name: Download RPMs
-        uses: actions/download-artifact@v4.1.3
+        uses: actions/download-artifact@v4.1.3  # pinned: v4 < 4.1.3 has GHSA-cxww-7g56-2vh6
         with:
           name: rpms
           path: rpms
@@ -653,16 +663,11 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          gh issue create \
-            --repo "${{ github.repository }}" \
-            --title "PKGBUILD update failed for $TAG" \
-            --label "ci-failure" \
-            --body "update-pkgbuild failed on release $TAG. Run: $RUN_URL"
+        uses: ./.github/actions/notify-failure
+        with:
+          github-token: ${{ github.token }}
+          title: "PKGBUILD update failed for ${{ github.ref_name }}"
+          body: "update-pkgbuild failed on release ${{ github.ref_name }}. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
   # ── Cleanup stale release-plz branches ───────────────────────────────────
 
