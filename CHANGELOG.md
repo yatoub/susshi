@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.20.1] — 2026-07-19
+
+### Fixed
+
+- Refresh stale susshi-bin AUR checksum and fix re-publish gating ([#162](https://github.com/yatoub/susshi/pull/162))
+
+
 ## [0.20.0] — 2026-07-15
 
 ### Added
