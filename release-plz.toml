@@ -39,7 +39,7 @@ body = """
 """
 
 commit_parsers = [
-  # Commits purement opérationnels : pas de release utilisateur déclenchée.
+  # Purely operational commits: no user-facing release triggered.
   { message = "^fix\\(ci\\)", skip = true },
   { message = "^chore\\(roadmap\\)", skip = true },
   { message = "^chore\\(release\\)", skip = true },
@@ -48,7 +48,7 @@ commit_parsers = [
   { message = "^ci", skip = true },
   { message = "^test", skip = true },
   { message = "^docs", skip = true },
-  # Commits visibles dans le changelog.
+  # Commits visible in the changelog.
   { message = "^feat", group = "Added" },
   { message = "^fix", group = "Fixed" },
   { message = "^perf", group = "Changed" },

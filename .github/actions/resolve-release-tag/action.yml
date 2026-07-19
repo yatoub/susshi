@@ -1,0 +1,53 @@
+name: Resolve release tag
+description: >
+  Resolves the version tag to publish, either from a workflow_dispatch
+  input or by matching the triggering workflow_run's head_sha against
+  remote tags (head_branch is always a branch name like "master", never
+  the tag). Fails closed if the resolved value isn't a valid vX.Y.Z tag.
+  Shared by aur-publish.yml's aur-source and aur-bin jobs.
+
+inputs:
+  input-tag:
+    description: The workflow_dispatch "tag" input, if any
+    required: false
+    default: ""
+  head-sha:
+    description: The triggering workflow_run's head_sha, if any
+    required: false
+    default: ""
+  repo:
+    description: "owner/repo to resolve tags against"
+    required: true
+
+outputs:
+  tag:
+    description: Resolved tag (e.g. v0.12.0)
+    value: ${{ steps.resolve.outputs.tag }}
+  version:
+    description: Resolved tag with the leading "v" stripped
+    value: ${{ steps.resolve.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve version to publish
+      id: resolve
+      shell: bash
+      env:
+        INPUT_TAG: ${{ inputs.input-tag }}
+        HEAD_SHA: ${{ inputs.head-sha }}
+        REPO: ${{ inputs.repo }}
+      run: |
+        if [ -n "$INPUT_TAG" ]; then
+          TAG="$INPUT_TAG"
+        else
+          TAG=$(git ls-remote --tags "https://github.com/${REPO}.git" 'refs/tags/v*' \
+            | awk -v sha="$HEAD_SHA" \
+                '$1 == sha { gsub(/refs\/tags\//, "", $2); gsub(/\^\{\}$/, "", $2); if ($2 ~ /^v[0-9]/) { print $2; exit } }')
+        fi
+        if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
+          echo "Invalid tag format: $TAG" >&2
+          exit 1
+        fi
+        echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+        echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"

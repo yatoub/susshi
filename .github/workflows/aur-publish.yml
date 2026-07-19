@@ -20,6 +20,12 @@ on:
 permissions:
   contents: read
 
+# A manual re-publish (workflow_dispatch) could otherwise race a run
+# triggered by the Release workflow completing for the same tag.
+concurrency:
+  group: aur-publish-${{ github.event.inputs.tag || github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
 jobs:
   # ── susshi (source package) ───────────────────────────────────────────────
 
@@ -42,31 +48,16 @@ jobs:
         github.event.workflow_run.event == 'workflow_dispatch'))
 
     steps:
-      - name: Resolve version to publish
-        id: ver
-        env:
-          INPUT_TAG: ${{ github.event.inputs.tag }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          REPO: ${{ github.repository }}
-        run: |
-          if [ -n "$INPUT_TAG" ]; then
-            TAG="$INPUT_TAG"
-          else
-            # workflow_run.head_branch is always the branch name (e.g. "master"),
-            # not the tag. Resolve by finding the tag that points to HEAD_SHA.
-            TAG=$(git ls-remote --tags "https://github.com/${REPO}.git" 'refs/tags/v*' \
-              | awk -v sha="$HEAD_SHA" \
-                  '$1 == sha { gsub(/refs\/tags\//, "", $2); gsub(/\^\{\}$/, "", $2); if ($2 ~ /^v[0-9]/) { print $2; exit } }')
-          fi
-          if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
-            echo "Invalid tag format: $TAG" >&2
-            exit 1
-          fi
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Resolve version to publish
+        id: ver
+        uses: ./.github/actions/resolve-release-tag
+        with:
+          input-tag: ${{ github.event.inputs.tag }}
+          head-sha: ${{ github.event.workflow_run.head_sha }}
+          repo: ${{ github.repository }}
 
       - name: Compute checksum of source archive
         id: checksum
@@ -99,16 +90,11 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.ver.outputs.tag }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          gh issue create \
-            --repo "${{ github.repository }}" \
-            --title "AUR publish (susshi) failed for ${TAG:-unknown}" \
-            --label "ci-failure" \
-            --body "aur-source failed. Run: $RUN_URL"
+        uses: ./.github/actions/notify-failure
+        with:
+          github-token: ${{ github.token }}
+          title: "AUR publish (susshi) failed for ${{ steps.ver.outputs.tag || 'unknown' }}"
+          body: "aur-source failed. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
   # ── susshi-bin (pre-built binary package) ─────────────────────────────────
 
@@ -131,29 +117,16 @@ jobs:
         github.event.workflow_run.event == 'workflow_dispatch'))
 
     steps:
-      - name: Resolve version to publish
-        id: ver
-        env:
-          INPUT_TAG: ${{ github.event.inputs.tag }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-          REPO: ${{ github.repository }}
-        run: |
-          if [ -n "$INPUT_TAG" ]; then
-            TAG="$INPUT_TAG"
-          else
-            TAG=$(git ls-remote --tags "https://github.com/${REPO}.git" 'refs/tags/v*' \
-              | awk -v sha="$HEAD_SHA" \
-                  '$1 == sha { gsub(/refs\/tags\//, "", $2); gsub(/\^\{\}$/, "", $2); if ($2 ~ /^v[0-9]/) { print $2; exit } }')
-          fi
-          if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+'; then
-            echo "Invalid tag format: $TAG" >&2
-            exit 1
-          fi
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Resolve version to publish
+        id: ver
+        uses: ./.github/actions/resolve-release-tag
+        with:
+          input-tag: ${{ github.event.inputs.tag }}
+          head-sha: ${{ github.event.workflow_run.head_sha }}
+          repo: ${{ github.repository }}
 
       - name: Compute checksums (source archive + Linux binary)
         id: checksums
@@ -191,13 +164,8 @@ jobs:
 
       - name: Notify on failure
         if: failure()
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.ver.outputs.tag }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          gh issue create \
-            --repo "${{ github.repository }}" \
-            --title "AUR publish (susshi-bin) failed for ${TAG:-unknown}" \
-            --label "ci-failure" \
-            --body "aur-bin failed. Run: $RUN_URL"
+        uses: ./.github/actions/notify-failure
+        with:
+          github-token: ${{ github.token }}
+          title: "AUR publish (susshi-bin) failed for ${{ steps.ver.outputs.tag || 'unknown' }}"
+          body: "aur-bin failed. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

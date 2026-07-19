@@ -1,0 +1,32 @@
+name: Notify on failure
+description: >
+  Opens a ci-failure-labeled GitHub issue when the calling job fails.
+  Shared by release.yml and aur-publish.yml, which each have several
+  jobs that previously duplicated this step with only string substitutions.
+
+inputs:
+  title:
+    description: Issue title
+    required: true
+  body:
+    description: Issue body
+    required: true
+  github-token:
+    description: Token used to create the issue
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Create failure issue
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        TITLE: ${{ inputs.title }}
+        BODY: ${{ inputs.body }}
+      run: |
+        gh issue create \
+          --repo "${{ github.repository }}" \
+          --title "$TITLE" \
+          --label "ci-failure" \
+          --body "$BODY"
