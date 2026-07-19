@@ -168,7 +168,7 @@ jobs:
             experimental-features = nix-command flakes
 
       - name: Cache Nix store
-        uses: nix-community/cache-nix-action@v6
+        uses: nix-community/cache-nix-action@v7
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock', 'flake.nix', 'Cargo.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
