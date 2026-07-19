@@ -163,7 +163,7 @@ jobs:
           sudo dpkg -r susshi
 
       - name: Set up QEMU (for arm64 smoke test)
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
 
