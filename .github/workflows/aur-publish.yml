@@ -1,29 +1,33 @@
 name: Publish to AUR
 
-# Triggered automatically after the Release workflow succeeds,
-# or manually via workflow_dispatch to re-publish an existing tag.
+# Triggered explicitly by the Release workflow's update-pkgbuild job once it
+# knows the tag being published (via `gh workflow run aur-publish.yml -f
+# tag=...`), or manually via workflow_dispatch to re-publish an existing tag.
+#
+# Not triggered by the implicit `workflow_run` event: for a manual
+# workflow_dispatch re-publish of Release, workflow_run.head_sha is just the
+# branch tip at dispatch time (not the tagged commit), so resolving the tag
+# by matching head_sha against remote tags fails for that case. Requiring an
+# explicit tag input sidesteps that entirely.
 #
 # Updates two AUR packages in parallel:
 #   susshi      — builds from the released source tarball
 #   susshi-bin  — installs the pre-built susshi-linux-x86_64 binary
 
 on:
-  workflow_run:
-    workflows: ["Release"]
-    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to re-publish (e.g. v0.12.0)"
+        description: "Tag to publish (e.g. v0.12.0)"
         required: true
 
 permissions:
   contents: read
 
-# A manual re-publish (workflow_dispatch) could otherwise race a run
-# triggered by the Release workflow completing for the same tag.
+# A manual re-publish could otherwise race the run triggered by release.yml
+# for the same tag.
 concurrency:
-  group: aur-publish-${{ github.event.inputs.tag || github.event.workflow_run.head_sha }}
+  group: aur-publish-${{ github.event.inputs.tag }}
   cancel-in-progress: false
 
 jobs:
@@ -36,16 +40,6 @@ jobs:
     permissions:
       contents: read
       issues: write
-    # Also run when the completed Release workflow was itself a manual
-    # workflow_dispatch re-publish: a re-publish can rebuild the binary
-    # (overwrite: true on the upload step) with different bytes, which
-    # otherwise leaves the AUR package's checksum stale until the next
-    # tagged release.
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       (github.event.workflow_run.event == 'push' ||
-        github.event.workflow_run.event == 'workflow_dispatch'))
 
     steps:
       - name: Checkout
@@ -56,8 +50,6 @@ jobs:
         uses: ./.github/actions/resolve-release-tag
         with:
           input-tag: ${{ github.event.inputs.tag }}
-          head-sha: ${{ github.event.workflow_run.head_sha }}
-          repo: ${{ github.repository }}
 
       - name: Compute checksum of source archive
         id: checksum
@@ -105,16 +97,6 @@ jobs:
     permissions:
       contents: read
       issues: write
-    # Also run when the completed Release workflow was itself a manual
-    # workflow_dispatch re-publish: a re-publish can rebuild the binary
-    # (overwrite: true on the upload step) with different bytes, which
-    # otherwise leaves the AUR package's checksum stale until the next
-    # tagged release.
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       (github.event.workflow_run.event == 'push' ||
-        github.event.workflow_run.event == 'workflow_dispatch'))
 
     steps:
       - name: Checkout
@@ -125,8 +107,6 @@ jobs:
         uses: ./.github/actions/resolve-release-tag
         with:
           input-tag: ${{ github.event.inputs.tag }}
-          head-sha: ${{ github.event.workflow_run.head_sha }}
-          repo: ${{ github.repository }}
 
       - name: Compute checksums (source archive + Linux binary)
         id: checksums

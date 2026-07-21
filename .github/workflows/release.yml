@@ -13,8 +13,8 @@ name: Release
 #   publish-rpm     — signs + publishes a DNF/YUM repo to gh-pages:/rpm (createrepo_c)
 #
 # After build:
-#   update-pkgbuild — commits refreshed PKGBUILD to master,
-#                     which triggers aur-publish.yml
+#   update-pkgbuild — commits refreshed PKGBUILD to master, then explicitly
+#                     triggers aur-publish.yml with the resolved tag
 
 on:
   push:
@@ -625,8 +625,7 @@ jobs:
       - name: Checkout master
         uses: actions/checkout@v7
         with:
-          # PAT required so this push triggers aur-publish.yml.
-          # GITHUB_TOKEN pushes are silently ignored by workflow event triggers.
+          # PAT required to push to master (branch-protected against GITHUB_TOKEN).
           token: ${{ secrets.RELEASE_PLZ_TOKEN }}
           ref: master
 
@@ -661,18 +660,24 @@ jobs:
             echo "No changes to commit"
             exit 0
           fi
-          TAG="${{ github.ref_name }}"
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
           VERSION="${TAG#v}"
           git commit -m "chore(release): update PKGBUILD to v${VERSION}"
           git push
+
+      - name: Trigger AUR publish
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLZ_TOKEN }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: gh workflow run aur-publish.yml --repo "${{ github.repository }}" -f tag="$TAG"
 
       - name: Notify on failure
         if: failure()
         uses: ./.github/actions/notify-failure
         with:
           github-token: ${{ github.token }}
-          title: "PKGBUILD update failed for ${{ github.ref_name }}"
-          body: "update-pkgbuild failed on release ${{ github.ref_name }}. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          title: "PKGBUILD update failed for ${{ github.event.inputs.tag || github.ref_name }}"
+          body: "update-pkgbuild failed on release ${{ github.event.inputs.tag || github.ref_name }}. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
   # ── Cleanup stale release-plz branches ───────────────────────────────────
 
