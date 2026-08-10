@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.21.1] — 2026-08-10
+
+### Fixed
+
+- Update proc-macro-error3 to unyanked v3.1.0 ([#186](https://github.com/yatoub/susshi/pull/186))
+
+
 ## [0.21.0] — 2026-07-19
 
 ### Added
