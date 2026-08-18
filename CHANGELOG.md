@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.22.0] — 2026-08-18
+
+### Added
+
+- Limit include recursion to 2 levels and warn on outdated include repos ([#197](https://github.com/yatoub/susshi/pull/197))
+
+
 ## [0.21.1] — 2026-08-10
 
 ### Fixed
