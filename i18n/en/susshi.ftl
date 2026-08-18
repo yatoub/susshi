@@ -103,6 +103,7 @@ wallix-selector-list-hint = ↑/↓: navigate | Enter: connect | Esc/q: cancel
 include-warn-load = Failed to load '{ $label }' ({ $path }) : { $error }
 include-warn-circular = Circular dependency ignored: '{ $label }' ({ $path })
 include-warn-nested = Nested includes in '{ $label }' are ignored (v0.7)
+include-warn-git-outdated = Git repository '{ $path }' is { $behind } commit(s) behind its upstream branch — consider running git pull.
 
 # ── Status messages ───────────────────────────────────────────────────────────
 copied = Copied: { $cmd }

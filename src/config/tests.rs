@@ -1899,6 +1899,104 @@ fn test_include_depth_at_limit() {
 }
 
 #[test]
+fn test_include_two_levels_of_nesting_allowed() {
+    // main → A → B (B a des serveurs, pas d'includes) : exactement 2 niveaux
+    // d'includes imbriqués, doit réussir.
+    let leaf_yaml = r#"
+groups:
+  - name: Leaf
+    servers:
+      - name: leaf_srv
+        host: "203.0.113.9"
+"#;
+    let leaf_file = write_temp_yaml(leaf_yaml);
+
+    let sub_yaml = format!(
+        r#"
+includes:
+  - label: "B"
+    path: "{}"
+groups: []
+"#,
+        leaf_file.path().to_string_lossy()
+    );
+    let sub_file = write_temp_yaml(&sub_yaml);
+
+    let main_yaml = format!(
+        r#"
+includes:
+  - label: "A"
+    path: "{}"
+groups: []
+"#,
+        sub_file.path().to_string_lossy()
+    );
+    let main_file = write_temp_yaml(&main_yaml);
+
+    let (config, warnings, _val) =
+        Config::load_merged(main_file.path(), &mut std::collections::HashSet::new(), 0).unwrap();
+    assert!(
+        warnings.is_empty(),
+        "Expected no warnings, got: {:?}",
+        warnings
+    );
+    let resolved = config.resolve().unwrap();
+    assert!(
+        resolved
+            .iter()
+            .any(|s| s.name == "leaf_srv" && s.namespace == "A / B")
+    );
+}
+
+#[test]
+fn test_include_three_levels_of_nesting_rejected() {
+    // main → A → B → C : un 3ᵉ niveau d'includes imbriqués dépasse la limite
+    // (2) et doit être rejeté avec une erreur explicite, pas un avertissement.
+    let leaf_yaml = "groups: []\n";
+    let leaf_file = write_temp_yaml(leaf_yaml);
+
+    let c_yaml = format!(
+        r#"
+includes:
+  - label: "C"
+    path: "{}"
+groups: []
+"#,
+        leaf_file.path().to_string_lossy()
+    );
+    let c_file = write_temp_yaml(&c_yaml);
+
+    let b_yaml = format!(
+        r#"
+includes:
+  - label: "B"
+    path: "{}"
+groups: []
+"#,
+        c_file.path().to_string_lossy()
+    );
+    let b_file = write_temp_yaml(&b_yaml);
+
+    let a_yaml = format!(
+        r#"
+includes:
+  - label: "A"
+    path: "{}"
+groups: []
+"#,
+        b_file.path().to_string_lossy()
+    );
+    let a_file = write_temp_yaml(&a_yaml);
+
+    let err =
+        Config::load_merged(a_file.path(), &mut std::collections::HashSet::new(), 0).unwrap_err();
+    assert!(
+        matches!(err, ConfigError::IncludeDepthExceeded { .. }),
+        "expected IncludeDepthExceeded, got: {err}"
+    );
+}
+
+#[test]
 fn test_fetch_url_rejects_http_scheme() {
     // https_only(true) rejects http:// before any network call — no mocking needed.
     let result = fetch_url("http://example.com/config.yaml");
@@ -1909,5 +2007,216 @@ fn test_fetch_url_rejects_http_scheme() {
             || msg.to_lowercase().contains("https")
             || msg.to_lowercase().contains("plain"),
         "error message should mention the scheme issue, got: {msg}"
+    );
+}
+
+// ─── Tests git_outdated_warnings (issue #196) ─────────────────────────────────
+
+fn run_git(dir: &std::path::Path, args: &[&str]) {
+    let output = std::process::Command::new("git")
+        .arg("-C")
+        .arg(dir)
+        .args(args)
+        .output()
+        .expect("failed to spawn git");
+    assert!(
+        output.status.success(),
+        "git -C {} {:?} failed: {}",
+        dir.display(),
+        args,
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+fn init_repo_with_commit(dir: &std::path::Path) {
+    std::fs::create_dir_all(dir).unwrap();
+    run_git(dir, &["init", "-b", "main"]);
+    run_git(dir, &["config", "user.email", "test@example.com"]);
+    run_git(dir, &["config", "user.name", "Test"]);
+    std::fs::write(dir.join("susshi.yml"), "groups: []\n").unwrap();
+    run_git(dir, &["add", "susshi.yml"]);
+    run_git(dir, &["commit", "-m", "initial"]);
+}
+
+fn namespace_for(label: &str, source_path: &std::path::Path) -> ConfigEntry {
+    ConfigEntry::Namespace(NamespaceEntry {
+        label: label.to_string(),
+        source_path: source_path.display().to_string(),
+        defaults: None,
+        entries: vec![],
+        vars: HashMap::new(),
+    })
+}
+
+#[test]
+fn test_git_outdated_warns_when_behind() {
+    let dir = tempfile::tempdir().unwrap();
+    let bare = dir.path().join("remote.git");
+    let checkout = dir.path().join("checkout");
+    let other = dir.path().join("other");
+
+    run_git(dir.path(), &["init", "--bare", bare.to_str().unwrap()]);
+
+    init_repo_with_commit(&checkout);
+    run_git(
+        &checkout,
+        &["remote", "add", "origin", bare.to_str().unwrap()],
+    );
+    run_git(&checkout, &["push", "-u", "origin", "main"]);
+
+    // Second clone pushes an extra commit that `checkout` doesn't have yet.
+    run_git(
+        dir.path(),
+        &["clone", bare.to_str().unwrap(), other.to_str().unwrap()],
+    );
+    // The bare repo's default HEAD may not point at "main" (it depends on
+    // git's default-branch config at `init --bare` time, not on what was
+    // pushed) — check out the branch explicitly via its remote-tracking ref.
+    run_git(&other, &["checkout", "main"]);
+    run_git(&other, &["config", "user.email", "test@example.com"]);
+    run_git(&other, &["config", "user.name", "Test"]);
+    std::fs::write(other.join("extra.txt"), "x").unwrap();
+    run_git(&other, &["add", "extra.txt"]);
+    run_git(&other, &["commit", "-m", "extra"]);
+    run_git(&other, &["push", "origin", "main"]);
+
+    // Fetch (setup only — not part of the code under test) so `checkout`'s
+    // remote-tracking ref knows about the new commit without pulling it in.
+    run_git(&checkout, &["fetch", "origin"]);
+
+    let config = Config {
+        defaults: None,
+        groups: vec![namespace_for("Sub", &checkout.join("susshi.yml"))],
+        includes: vec![],
+        vars: HashMap::new(),
+    };
+
+    let warnings = git_outdated_warnings(&config);
+    assert_eq!(
+        warnings.len(),
+        1,
+        "expected exactly one warning, got: {warnings:?}"
+    );
+    match &warnings[0] {
+        IncludeWarning::GitOutdated { behind, .. } => assert_eq!(*behind, 1),
+        other => panic!("expected GitOutdated, got: {other:?}"),
+    }
+}
+
+#[test]
+fn test_git_outdated_no_warning_when_up_to_date() {
+    let dir = tempfile::tempdir().unwrap();
+    let checkout = dir.path().join("checkout");
+    init_repo_with_commit(&checkout);
+
+    let config = Config {
+        defaults: None,
+        groups: vec![namespace_for("Sub", &checkout.join("susshi.yml"))],
+        includes: vec![],
+        vars: HashMap::new(),
+    };
+
+    assert!(git_outdated_warnings(&config).is_empty());
+}
+
+#[test]
+fn test_git_outdated_no_warning_without_upstream() {
+    let dir = tempfile::tempdir().unwrap();
+    let checkout = dir.path().join("checkout");
+    // Repo with a commit but no remote configured at all.
+    init_repo_with_commit(&checkout);
+
+    let config = Config {
+        defaults: None,
+        groups: vec![namespace_for("Sub", &checkout.join("susshi.yml"))],
+        includes: vec![],
+        vars: HashMap::new(),
+    };
+
+    assert!(git_outdated_warnings(&config).is_empty());
+}
+
+#[test]
+fn test_git_outdated_no_warning_for_non_git_directory() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("susshi.yml"), "groups: []\n").unwrap();
+
+    let config = Config {
+        defaults: None,
+        groups: vec![namespace_for("Sub", &dir.path().join("susshi.yml"))],
+        includes: vec![],
+        vars: HashMap::new(),
+    };
+
+    assert!(git_outdated_warnings(&config).is_empty());
+}
+
+#[test]
+fn test_git_outdated_skips_http_includes() {
+    let config = Config {
+        defaults: None,
+        groups: vec![namespace_for(
+            "Remote",
+            std::path::Path::new("https://example.com/susshi.yml"),
+        )],
+        includes: vec![],
+        vars: HashMap::new(),
+    };
+
+    assert!(git_outdated_warnings(&config).is_empty());
+}
+
+#[test]
+fn test_git_outdated_dedups_same_repo() {
+    let dir = tempfile::tempdir().unwrap();
+    let bare = dir.path().join("remote.git");
+    let checkout = dir.path().join("checkout");
+    let other = dir.path().join("other");
+
+    run_git(dir.path(), &["init", "--bare", bare.to_str().unwrap()]);
+
+    init_repo_with_commit(&checkout);
+    std::fs::write(checkout.join("second.yml"), "groups: []\n").unwrap();
+    run_git(&checkout, &["add", "second.yml"]);
+    run_git(&checkout, &["commit", "-m", "second file"]);
+    run_git(
+        &checkout,
+        &["remote", "add", "origin", bare.to_str().unwrap()],
+    );
+    run_git(&checkout, &["push", "-u", "origin", "main"]);
+
+    run_git(
+        dir.path(),
+        &["clone", bare.to_str().unwrap(), other.to_str().unwrap()],
+    );
+    // The bare repo's default HEAD may not point at "main" (it depends on
+    // git's default-branch config at `init --bare` time, not on what was
+    // pushed) — check out the branch explicitly via its remote-tracking ref.
+    run_git(&other, &["checkout", "main"]);
+    run_git(&other, &["config", "user.email", "test@example.com"]);
+    run_git(&other, &["config", "user.name", "Test"]);
+    std::fs::write(other.join("extra.txt"), "x").unwrap();
+    run_git(&other, &["add", "extra.txt"]);
+    run_git(&other, &["commit", "-m", "extra"]);
+    run_git(&other, &["push", "origin", "main"]);
+
+    run_git(&checkout, &["fetch", "origin"]);
+
+    // Two includes from the same checkout must yield a single warning.
+    let config = Config {
+        defaults: None,
+        groups: vec![
+            namespace_for("Sub A", &checkout.join("susshi.yml")),
+            namespace_for("Sub B", &checkout.join("second.yml")),
+        ],
+        includes: vec![],
+        vars: HashMap::new(),
+    };
+
+    let warnings = git_outdated_warnings(&config);
+    assert_eq!(
+        warnings.len(),
+        1,
+        "expected deduped warning, got: {warnings:?}"
     );
 }

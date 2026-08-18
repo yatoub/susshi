@@ -103,6 +103,7 @@ wallix-selector-list-hint = ↑/↓ : naviguer | Entrée : connecter | Esc/q : a
 include-warn-load = Impossible de charger '{ $label }' ({ $path }) : { $error }
 include-warn-circular = Dépendance circulaire ignorée : '{ $label }' ({ $path })
 include-warn-nested = Les includes imbriqués dans '{ $label }' sont ignorés (v0.7)
+include-warn-git-outdated = Le dépôt git '{ $path }' a { $behind } commit(s) de retard sur sa branche amont — pensez à faire un git pull.
 
 # ── Messages de statut ────────────────────────────────────────────────────────
 copied = Copié : { $cmd }

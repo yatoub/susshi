@@ -136,6 +136,13 @@ impl App {
                             path = path.as_str()
                         )
                     }
+                    crate::config::IncludeWarning::GitOutdated { path, behind } => {
+                        fl!(
+                            "include-warn-git-outdated",
+                            path = path.as_str(),
+                            behind = (*behind as i64)
+                        )
+                    }
                 })
                 .collect();
             app.app_mode = AppMode::Error(lines.join("\n"));
@@ -147,8 +154,9 @@ impl App {
     /// Reloads configuration from disk without restarting the app.
     pub fn reload(&mut self) -> Result<(), ConfigError> {
         let mut stack = std::collections::HashSet::new();
-        let (new_config, new_warnings, new_val_warnings) =
+        let (new_config, mut new_warnings, new_val_warnings) =
             Config::load_merged(&self.config_path, &mut stack, 0)?;
+        new_warnings.extend(crate::config::git_outdated_warnings(&new_config));
         let resolved = new_config.resolve()?;
 
         self.config_hash = hash_config_file(&self.config_path);
