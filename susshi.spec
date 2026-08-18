@@ -1,5 +1,5 @@
 Name:           susshi
-Version:        0.21.1
+Version:        0.22.0
 Release:        1%{?dist}
 Summary:        Terminal SSH manager — TUI, YAML inventory, jump hosts, Wallix bastion, tunnels, SCP
 License:        MIT
