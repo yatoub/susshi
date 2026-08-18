@@ -4,7 +4,10 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-const MAX_INCLUDE_DEPTH: u32 = 8;
+// 2 niveaux d'includes imbriqués (fichier principal → include → include de
+// l'include), pas plus : au-delà, les chaînes de configuration deviennent
+// difficiles à suivre.
+const MAX_INCLUDE_DEPTH: u32 = 2;
 const MAX_FILE_SIZE_BYTES: u64 = 5 * 1024 * 1024; // 5 MiB
 const HTTP_TIMEOUT_SECS: u64 = 10;
 
@@ -26,6 +29,10 @@ pub use interpolate::{interpolate, undefined_vars};
 mod validate;
 pub(crate) use validate::fetch_url;
 pub use validate::validate_yaml;
+
+#[path = "config/git_status.rs"]
+mod git_status;
+pub use git_status::git_outdated_warnings;
 
 #[cfg(test)]
 #[path = "config/tests.rs"]

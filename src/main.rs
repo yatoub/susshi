@@ -60,8 +60,9 @@ fn validate_config(config_path: &std::path::Path) {
             eprintln!("ERREUR : {e}");
             process::exit(1);
         }
-        Ok((config, inc_warnings, val_warnings)) => {
+        Ok((config, mut inc_warnings, val_warnings)) => {
             let mut has_error = false;
+            inc_warnings.extend(susshi::config::git_outdated_warnings(&config));
 
             for w in &inc_warnings {
                 match w {
@@ -71,6 +72,9 @@ fn validate_config(config_path: &std::path::Path) {
                     }
                     IncludeWarning::Circular { label, path } => {
                         eprintln!("[WARN  circular] {label} ({path})");
+                    }
+                    IncludeWarning::GitOutdated { path, behind } => {
+                        eprintln!("[WARN  git]     {path}: {behind} commit(s) de retard");
                     }
                 }
             }
@@ -515,7 +519,7 @@ fn main() -> io::Result<()> {
         return Err(e);
     }
 
-    let (config, warnings, val_warnings) =
+    let (config, mut warnings, val_warnings) =
         match Config::load_merged(config_path, &mut HashSet::new(), 0) {
             Ok(c) => c,
             Err(e) => {
@@ -523,6 +527,7 @@ fn main() -> io::Result<()> {
                 return Err(io::Error::new(io::ErrorKind::InvalidData, e.to_string()));
             }
         };
+    warnings.extend(susshi::config::git_outdated_warnings(&config));
 
     // ── Modes non-TUI ──────────────────────────────────────────────────────
     if cli.export.is_some() {

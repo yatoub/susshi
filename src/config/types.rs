@@ -110,6 +110,9 @@ pub enum IncludeWarning {
     },
     /// Dépendance circulaire détectée.
     Circular { label: String, path: String },
+    /// Le dépôt git contenant le fichier inclus a des commits en retard sur
+    /// sa branche amont (détecté sans `git fetch`, à partir des refs locales).
+    GitOutdated { path: String, behind: u32 },
 }
 
 /// Avertissement émis lors de la validation YAML — champ inconnu ou inattendu.
