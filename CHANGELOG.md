@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.22.1] — 2026-08-19
+
+### Fixed
+
+- Skip empty umbrella namespace for includes-only files ([#200](https://github.com/yatoub/susshi/pull/200))
+
+
 ## [0.22.0] — 2026-08-18
 
 ### Added
