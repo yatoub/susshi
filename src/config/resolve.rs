@@ -191,15 +191,22 @@ impl Config {
                         other => direct_entries.push(other),
                     }
                 }
-                config.groups.push(ConfigEntry::Namespace(NamespaceEntry {
-                    label: entry.label.clone(),
-                    source_path: url.clone(),
-                    defaults: sub_config.defaults,
-                    entries: direct_entries,
-                    vars: sub_config.vars,
-                }));
+                // Un fichier inclus ne contenant lui-même que des `!include` (aucune
+                // entrée directe) ne produit pas de nœud "parapluie" vide dans l'arbre.
+                if !direct_entries.is_empty() {
+                    push_namespace(
+                        &mut config.groups,
+                        NamespaceEntry {
+                            label: entry.label.clone(),
+                            source_path: url.clone(),
+                            defaults: sub_config.defaults,
+                            entries: direct_entries,
+                            vars: sub_config.vars,
+                        },
+                    );
+                }
                 for nested in nested_namespaces {
-                    config.groups.push(ConfigEntry::Namespace(nested));
+                    push_namespace(&mut config.groups, nested);
                 }
                 continue;
             }
@@ -269,24 +276,34 @@ impl Config {
                 }
             }
 
-            // Namespace principal avec les entrées directes
-            config.groups.push(ConfigEntry::Namespace(NamespaceEntry {
-                label: entry.label.clone(),
-                source_path: sub_canonical.display().to_string(),
-                defaults: sub_config.defaults,
-                entries: direct_entries,
-                vars: sub_config.vars.clone(),
-            }));
+            // Namespace principal avec les entrées directes. Un fichier inclus ne
+            // contenant lui-même que des `!include` (aucune entrée directe) ne
+            // produit pas de nœud "parapluie" vide dans l'arbre.
+            if !direct_entries.is_empty() {
+                push_namespace(
+                    &mut config.groups,
+                    NamespaceEntry {
+                        label: entry.label.clone(),
+                        source_path: sub_canonical.display().to_string(),
+                        defaults: sub_config.defaults,
+                        entries: direct_entries,
+                        vars: sub_config.vars.clone(),
+                    },
+                );
+            }
 
             // Namespaces imbriqués aplatis avec label préfixé "parent / enfant"
             for nested in nested_namespaces {
-                config.groups.push(ConfigEntry::Namespace(NamespaceEntry {
-                    label: format!("{} / {}", entry.label, nested.label),
-                    source_path: nested.source_path,
-                    defaults: nested.defaults,
-                    entries: nested.entries,
-                    vars: nested.vars,
-                }));
+                push_namespace(
+                    &mut config.groups,
+                    NamespaceEntry {
+                        label: format!("{} / {}", entry.label, nested.label),
+                        source_path: nested.source_path,
+                        defaults: nested.defaults,
+                        entries: nested.entries,
+                        vars: nested.vars,
+                    },
+                );
             }
         }
 
@@ -295,6 +312,28 @@ impl Config {
 
         Ok((config, inc_warnings, val_warnings))
     }
+}
+
+/// Ajoute un `NamespaceEntry` à `groups`, en le fusionnant avec un namespace existant
+/// de même `label` plutôt que de créer un doublon dans l'arborescence.
+///
+/// Deux `!include` distincts (ou un include imbriqué et un include direct) peuvent
+/// légitimement partager le même label (ex. deux fichiers sous "CES 3S") ; sans
+/// fusion, chacun produisait un nœud racine séparé dans l'arbre affiché.
+fn push_namespace(groups: &mut Vec<ConfigEntry>, ns: NamespaceEntry) {
+    for entry in groups.iter_mut() {
+        if let ConfigEntry::Namespace(existing) = entry
+            && existing.label == ns.label
+        {
+            existing.entries.extend(ns.entries);
+            existing.vars.extend(ns.vars);
+            if existing.defaults.is_none() {
+                existing.defaults = ns.defaults;
+            }
+            return;
+        }
+    }
+    groups.push(ConfigEntry::Namespace(ns));
 }
 
 /// Résout un slice d'entrées de configuration avec les defaults et le namespace donnés.

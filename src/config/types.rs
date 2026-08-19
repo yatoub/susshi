@@ -139,6 +139,7 @@ impl fmt::Display for ValidationWarning {
 #[derive(Debug, Deserialize, Default)]
 pub struct Config {
     pub defaults: Option<Defaults>,
+    #[serde(default)]
     pub groups: Vec<ConfigEntry>,
     /// Fichiers supplémentaires à fusionner (ignoré dans les sous-fichiers).
     #[serde(default)]

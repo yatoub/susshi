@@ -628,6 +628,133 @@ groups:
 }
 
 #[test]
+fn test_includes_duplicate_label_merges_into_single_namespace() {
+    // Deux fichiers inclus séparément sous le même label doivent produire
+    // un seul nœud Namespace dans l'arbre, avec les entrées des deux fusionnées.
+    let sub_a_yaml = r#"
+groups:
+  - name: Group_A
+    servers:
+      - name: srv_a
+        host: "198.51.100.1"
+"#;
+    let sub_b_yaml = r#"
+groups:
+  - name: Group_B
+    servers:
+      - name: srv_b
+        host: "198.51.100.2"
+"#;
+    let sub_a_file = write_temp_yaml(sub_a_yaml);
+    let sub_b_file = write_temp_yaml(sub_b_yaml);
+
+    let main_yaml = format!(
+        r#"
+includes:
+  - label: "CES 3S"
+    path: "{}"
+  - label: "CES 3S"
+    path: "{}"
+"#,
+        sub_a_file.path().to_string_lossy(),
+        sub_b_file.path().to_string_lossy()
+    );
+    let main_file = write_temp_yaml(&main_yaml);
+
+    let (config, warnings, _val) =
+        Config::load_merged(main_file.path(), &mut std::collections::HashSet::new(), 0).unwrap();
+    assert!(warnings.is_empty(), "Expected no warnings: {:?}", warnings);
+
+    let namespaces: Vec<_> = config
+        .groups
+        .iter()
+        .filter_map(|e| match e {
+            ConfigEntry::Namespace(ns) if ns.label == "CES 3S" => Some(ns),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        namespaces.len(),
+        1,
+        "Expected a single merged Namespace(CES 3S), got {}",
+        namespaces.len()
+    );
+    assert_eq!(namespaces[0].entries.len(), 2);
+
+    let resolved = config.resolve().unwrap();
+    assert!(resolved.iter().any(|s| s.name == "srv_a"));
+    assert!(resolved.iter().any(|s| s.name == "srv_b"));
+}
+
+#[test]
+fn test_includes_only_file_omits_empty_umbrella_namespace() {
+    // Un fichier racine qui ne fait que `!include` d'autres fichiers, sans
+    // `groups:` explicite ni entrée directe, ne doit produire ni erreur de
+    // parsing ni nœud "CES 3S" vide dans l'arbre : seuls les sous-namespaces
+    // "CES 3S / Colibris" et "CES 3S / Scolarité" doivent apparaître.
+    let colibris_yaml = r#"
+groups:
+  - name: COLIBRIS
+    servers:
+      - name: colibris_srv
+        host: "198.51.100.10"
+"#;
+    let scolarite_yaml = r#"
+groups:
+  - name: SCOLARITE
+    servers:
+      - name: scolarite_srv
+        host: "198.51.100.11"
+"#;
+    let colibris_file = write_temp_yaml(colibris_yaml);
+    let scolarite_file = write_temp_yaml(scolarite_yaml);
+
+    let umbrella_yaml = format!(
+        r#"
+includes:
+  - label: "Colibris"
+    path: "{}"
+  - label: "Scolarité"
+    path: "{}"
+"#,
+        colibris_file.path().to_string_lossy(),
+        scolarite_file.path().to_string_lossy()
+    );
+    let umbrella_file = write_temp_yaml(&umbrella_yaml);
+
+    let main_yaml = format!(
+        r#"
+includes:
+  - label: "CES 3S"
+    path: "{}"
+"#,
+        umbrella_file.path().to_string_lossy()
+    );
+    let main_file = write_temp_yaml(&main_yaml);
+
+    let (config, warnings, _val) =
+        Config::load_merged(main_file.path(), &mut std::collections::HashSet::new(), 0).unwrap();
+    assert!(warnings.is_empty(), "Expected no warnings: {:?}", warnings);
+
+    let labels: Vec<&str> = config
+        .groups
+        .iter()
+        .filter_map(|e| match e {
+            ConfigEntry::Namespace(ns) => Some(ns.label.as_str()),
+            _ => None,
+        })
+        .collect();
+
+    assert!(
+        !labels.contains(&"CES 3S"),
+        "Empty umbrella namespace 'CES 3S' should not appear in tree, got {:?}",
+        labels
+    );
+    assert!(labels.contains(&"CES 3S / Colibris"));
+    assert!(labels.contains(&"CES 3S / Scolarité"));
+}
+
+#[test]
 fn test_includes_defaults_isolation() {
     let sub_yaml = r#"
 defaults:
