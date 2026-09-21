@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.22.2] — 2026-09-21
+
+### Fixed
+
+- Resolve cargo-deny advisory and yanked crate failures ([#207](https://github.com/yatoub/susshi/pull/207))
+
+
 ## [0.22.1] — 2026-08-19
 
 ### Fixed
