@@ -17,11 +17,11 @@ Not all fields follow the same rule. Three distinct semantics apply:
 
 | Semantic | Fields | Behaviour |
 |---|---|---|
-| **OVERRIDE** | `user`, `ssh_key`, `ssh_cert`, `ssh_agent_sock`, `ssh_port`, `mode`, `ssh_options`, `wallix`, `jump` | Lower level replaces the parent value entirely |
+| **OVERRIDE** | `user`, `ssh_key`, `ssh_cert`, `ssh_agent_sock`, `ssh_port`, `mode`, `ssh_options`, `wallix`, `jump`, `production` | Lower level replaces the parent value entirely |
 | **REPLACE** | `tunnels` | Lower level replaces the parent list entirely; if absent the parent list is used |
 | **UNION** | `tags`, `probe_filesystems` | Every level **appends** its values to the parent list (duplicates are removed) |
 
-Fields only available in `defaults` (not overridable per group/env/server): `theme`, `keep_open`, `default_filter`, `use_system_ssh_config`, `control_master`, `agent_forwarding`, `control_path`, `control_persist`, `pre_connect_hook`, `post_disconnect_hook`, `hook_timeout_secs`.
+Fields only available in `defaults` (not overridable per group/env/server): `theme`, `keep_open`, `default_filter`, `use_system_ssh_config`, `control_master`, `agent_forwarding`, `control_path`, `control_persist`, `pre_connect_hook`, `post_disconnect_hook`, `hook_timeout_secs`, `confirm_production`.
 
 ### Field availability per level
 
@@ -51,6 +51,8 @@ Fields only available in `defaults` (not overridable per group/env/server): `the
 | `keep_open` | ✓ | — | — | — |
 | `default_filter` | ✓ | — | — | — |
 | `theme` | ✓ | — | — | — |
+| `production` | ✓ | ✓ | ✓ | ✓ |
+| `confirm_production` | ✓ | — | — | — |
 | `name` | — | ✓ | ✓ | ✓ |
 | `host` | — | — | — | ✓ |
 | `notes` | — | — | — | ✓ |
@@ -70,6 +72,8 @@ Fields only available in `defaults` (not overridable per group/env/server): `the
 | `control_persist` | `"10m"` |
 | `keep_open` | `false` |
 | `use_system_ssh_config` | `false` |
+| `production` | auto-detected from the environment name (see below) |
+| `confirm_production` | `false` |
 | `wallix.auto_select` | `true` |
 | `wallix.fail_if_menu_match_error` | `true` |
 | `wallix.selection_timeout_secs` | `8` |
@@ -202,6 +206,38 @@ groups:
 ```
 
 Tags can be used to filter servers in the TUI (`/`) or in `--export-filter`.
+
+### Production servers
+
+Servers flagged as production get a red `PROD` badge in the list and the status bar, and a red
+border with a `⚠ PRODUCTION` line in the details panel.
+
+- **Explicit flag**: `production: true|false` at any level (`defaults`, group, environment,
+  server). The most specific level wins, so a server can opt out of a production environment.
+- **Auto-detection** (fallback when no level sets the flag): the environment name is `prod`,
+  `production` or `prd` (case-insensitive). Names such as `preprod` or `product-api` do **not**
+  match.
+- **Confirmation** (opt-in): set `confirm_production: true` in `defaults` to be asked before
+  connecting to a production server. Only `y` confirms; `n` or `Esc` cancels (`Enter` is
+  ignored on purpose, so a reflex double-press cannot bypass it).
+
+```yaml
+defaults:
+  confirm_production: true
+
+groups:
+  - name: Shop
+    environments:
+      - name: prod          # auto-detected
+        servers:
+          - name: web-1
+            host: 203.0.113.10
+      - name: staging
+        production: true    # explicit flag
+        servers:
+          - name: web-stg
+            host: 203.0.113.20
+```
 
 ---
 

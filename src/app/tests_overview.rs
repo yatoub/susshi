@@ -29,6 +29,7 @@ fn make_app_with_group() -> App {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 servers: vec![Server {
                     name: "srv1".to_string(),
                     host: "10.0.0.1".to_string(),
@@ -42,12 +43,14 @@ fn make_app_with_group() -> App {
                     probe_filesystems: None,
                     tunnels: None,
                     tags: None,
+                    production: None,
                     ..Default::default()
                 }],
             }]),
             servers: None,
             tunnels: None,
             tags: None,
+            production: None,
         })],
         vars: Default::default(),
     };

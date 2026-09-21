@@ -553,6 +553,60 @@ pub(crate) fn draw_credential_input_overlay(f: &mut Frame, app: &App, area: Rect
     );
 }
 
+/// Confirmation avant connexion à un serveur de production (`y` valide, `n`/Esc annule).
+pub(crate) fn draw_production_confirm_overlay(f: &mut Frame, app: &App, area: Rect) {
+    let AppMode::ConfirmProduction { server, .. } = &app.app_mode else {
+        return;
+    };
+
+    let popup_h: u16 = 6;
+    let popup_w: u16 = 56.min(area.width.saturating_sub(4));
+    let popup_area = centered_rect(popup_w, popup_h, area);
+
+    f.render_widget(Clear, popup_area);
+
+    let block = Block::default()
+        .title(fl!(
+            "production-confirm-title",
+            server = server.name.as_str()
+        ))
+        .borders(Borders::ALL)
+        .border_type(BorderType::Rounded)
+        .border_style(
+            Style::default()
+                .fg(app.theme.red)
+                .add_modifier(Modifier::BOLD),
+        )
+        .style(Style::default().bg(app.theme.bg));
+
+    let inner = block.inner(popup_area);
+    f.render_widget(block, popup_area);
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .split(inner);
+
+    f.render_widget(
+        Paragraph::new(fl!(
+            "production-confirm-message",
+            host = server.host.as_str()
+        ))
+        .style(Style::default().fg(app.theme.red)),
+        chunks[1],
+    );
+    f.render_widget(
+        Paragraph::new(fl!("production-confirm-hint"))
+            .style(Style::default().fg(app.theme.subtext0)),
+        chunks[3],
+    );
+}
+
 /// Dispatch entre la sélection de direction et le formulaire SCP.
 pub(crate) fn draw_scp_overlay(f: &mut Frame, app: &mut App, area: Rect) {
     match &app.scp_state {

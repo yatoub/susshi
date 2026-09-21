@@ -253,10 +253,15 @@ pub(crate) fn draw_tree(f: &mut Frame, app: &mut App, area: Rect) {
                 } else {
                     Style::default().fg(app.theme.server_item)
                 };
-                Line::from(vec![
+                let mut spans = vec![
                     Span::raw(indent),
                     Span::styled(format!("{} {}", icon, server.name), name_style),
-                ])
+                ];
+                if server.production {
+                    spans.push(Span::raw(" "));
+                    spans.push(production_badge(app.theme));
+                }
+                Line::from(spans)
             }
         };
 
@@ -286,14 +291,33 @@ pub(crate) fn draw_tree(f: &mut Frame, app: &mut App, area: Rect) {
     f.render_stateful_widget(list, area, &mut app.list_state);
 }
 
+/// Badge rouge « PROD » affiché à côté des serveurs de production.
+fn production_badge(theme: &Theme) -> Span<'static> {
+    Span::styled(
+        format!(" {} ", fl!("badge-production")),
+        Style::default()
+            .bg(theme.red)
+            .fg(theme.bg)
+            .add_modifier(Modifier::BOLD),
+    )
+}
+
 pub(crate) fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
+    let visible_items = app.get_visible_items();
+    let selected_is_production = matches!(
+        visible_items.get(app.selected_index),
+        Some(ConfigItem::Server(s)) if s.production
+    );
     let block = Block::default()
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .title(fl!("panel-details"))
-        .border_style(Style::default().fg(app.theme.border));
+        .border_style(Style::default().fg(if selected_is_production {
+            app.theme.red
+        } else {
+            app.theme.border
+        }));
 
-    let visible_items = app.get_visible_items();
     let text = if let Some(item) = visible_items.get(app.selected_index) {
         match item {
             ConfigItem::Server(server) => {
@@ -305,7 +329,16 @@ pub(crate) fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
                     Style::default().fg(app.theme.subtext0)
                 };
 
-                let mut lines = vec![
+                let mut lines = Vec::new();
+                if server.production {
+                    lines.push(Line::from(Span::styled(
+                        fl!("label-production"),
+                        Style::default()
+                            .fg(app.theme.red)
+                            .add_modifier(Modifier::BOLD),
+                    )));
+                }
+                lines.extend(vec![
                     Line::from(vec![
                         Span::styled(
                             fl!("label-name"),
@@ -363,7 +396,7 @@ pub(crate) fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
                         ),
                         Span::raw(&server.ssh_key),
                     ]),
-                ];
+                ]);
 
                 if let Some(jump) = &server.jump_host {
                     lines.push(Line::from(vec![
@@ -879,7 +912,7 @@ fn probe_bar(label: &str, pct: u8, total_gb: f32, theme: &Theme) -> Line<'static
     ])
 }
 
-pub(crate) fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
+pub(crate) fn draw_status_bar(f: &mut Frame, app: &App, area: Rect, selected_is_production: bool) {
     if let CmdState::Prompting(buf) = &app.cmd_state {
         let prompt = format!("{} {}\u{2588}", fl!("cmd-prompt"), buf);
         let paragraph =
@@ -1005,6 +1038,12 @@ pub(crate) fn draw_status_bar(f: &mut Frame, app: &App, area: Rect) {
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(1), Constraint::Length(1)])
         .split(area);
+
+    let mut line1_spans = line1_spans;
+    if selected_is_production {
+        line1_spans.insert(0, production_badge(theme));
+        line1_spans.insert(1, Span::styled(" ", Style::default().bg(bg)));
+    }
 
     f.render_widget(
         Paragraph::new(Line::from(line1_spans)).style(Style::default().bg(bg)),

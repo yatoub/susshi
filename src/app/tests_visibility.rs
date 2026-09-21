@@ -30,6 +30,7 @@ fn create_test_config() -> Config {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 servers: vec![Server {
                     name: "S1".to_string(),
                     host: "198.51.100.1".to_string(),
@@ -43,6 +44,7 @@ fn create_test_config() -> Config {
                     probe_filesystems: None,
                     tunnels: None,
                     tags: None,
+                    production: None,
                     ..Default::default()
                 }],
             }]),
@@ -59,10 +61,12 @@ fn create_test_config() -> Config {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 ..Default::default()
             }]),
             tunnels: None,
             tags: None,
+            production: None,
         })],
         vars: Default::default(),
     }

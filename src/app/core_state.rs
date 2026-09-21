@@ -88,6 +88,49 @@ impl App {
         Some(result)
     }
 
+    /// `true` si la connexion à ce serveur doit d'abord être confirmée
+    /// (serveur de production ET `confirm_production` activé).
+    pub fn needs_production_confirmation(&self, server: &ResolvedServer) -> bool {
+        server.production && server.confirm_production
+    }
+
+    /// Ouvre la confirmation de connexion à un serveur de production.
+    pub fn open_production_confirm(
+        &mut self,
+        server: ResolvedServer,
+        mode: ConnectionMode,
+        verbose: bool,
+    ) {
+        self.app_mode = AppMode::ConfirmProduction {
+            server: Box::new(server),
+            mode,
+            verbose,
+        };
+    }
+
+    /// Valide la confirmation : retourne `(server, mode, verbose)` et revient en mode Normal.
+    /// Retourne `None` (sans toucher au mode) si aucune confirmation n'est en attente.
+    pub fn accept_production_confirm(
+        &mut self,
+    ) -> Option<(ResolvedServer, crate::config::ConnectionMode, bool)> {
+        let AppMode::ConfirmProduction {
+            server,
+            mode,
+            verbose,
+        } = &self.app_mode
+        else {
+            return None;
+        };
+        let result = ((**server).clone(), *mode, *verbose);
+        self.app_mode = AppMode::Normal;
+        Some(result)
+    }
+
+    /// Annule la confirmation et revient en mode Normal.
+    pub fn cancel_production_confirm(&mut self) {
+        self.app_mode = AppMode::Normal;
+    }
+
     /// Calcule la cle unique d'un serveur (stable, independante de l'ordre de config).
     pub fn server_key(server: &ResolvedServer) -> String {
         let mut key = String::new();

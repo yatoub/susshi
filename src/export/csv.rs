@@ -56,6 +56,8 @@ mod tests {
             namespace: String::new(),
             tags: tags.into_iter().map(String::from).collect(),
             notes: String::new(),
+            production: false,
+            confirm_production: false,
             default_mode: ConnectionMode::Direct,
             jump_host: None,
             bastion_host: None,

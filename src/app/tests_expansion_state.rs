@@ -39,6 +39,7 @@ fn make_app_root_group_only() -> App {
             environments: None,
             tunnels: None,
             tags: None,
+            production: None,
             servers: Some(vec![Server {
                 name: "rs1".into(),
                 host: "10.1.0.1".into(),
@@ -68,6 +69,7 @@ fn make_app_two_servers() -> App {
             environments: None,
             tunnels: None,
             tags: None,
+            production: None,
             servers: Some(vec![
                 Server {
                     name: "s1".into(),

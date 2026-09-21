@@ -255,6 +255,8 @@ fn test_build_expected_target_from_resolved_server() {
         hook_timeout_secs: 5,
         ssh_cert: String::new(),
         notes: String::new(),
+        production: false,
+        confirm_production: false,
         ssh_agent_sock: String::new(),
     };
 
@@ -309,6 +311,8 @@ fn test_select_id_for_server_uses_resolved_server_fields() {
         hook_timeout_secs: 5,
         ssh_cert: String::new(),
         notes: String::new(),
+        production: false,
+        confirm_production: false,
         ssh_agent_sock: String::new(),
     };
 
@@ -360,6 +364,8 @@ fn test_select_id_for_server_single_entry_no_group() {
         hook_timeout_secs: 5,
         ssh_cert: String::new(),
         notes: String::new(),
+        production: false,
+        confirm_production: false,
         ssh_agent_sock: String::new(),
     };
 
@@ -420,6 +426,8 @@ fn test_select_id_for_server_multi_entry_no_group_returns_error() {
         hook_timeout_secs: 5,
         ssh_cert: String::new(),
         notes: String::new(),
+        production: false,
+        confirm_production: false,
         ssh_agent_sock: String::new(),
     };
 
@@ -468,6 +476,8 @@ fn test_build_expected_groups_adds_yaml_structure_prefix() {
         hook_timeout_secs: 5,
         ssh_cert: String::new(),
         notes: String::new(),
+        production: false,
+        confirm_production: false,
         ssh_agent_sock: String::new(),
     };
 
@@ -517,6 +527,8 @@ fn test_build_expected_targets_adds_wallix_alias_from_fqdn_and_yaml() {
         hook_timeout_secs: 5,
         ssh_cert: String::new(),
         notes: String::new(),
+        production: false,
+        confirm_production: false,
         ssh_agent_sock: String::new(),
     };
 
@@ -571,6 +583,8 @@ fn test_select_id_for_server_accepts_short_group_and_yaml_structure() {
         hook_timeout_secs: 5,
         ssh_cert: String::new(),
         notes: String::new(),
+        production: false,
+        confirm_production: false,
         ssh_agent_sock: String::new(),
     };
 
@@ -622,6 +636,8 @@ fn test_select_id_for_server_case_insensitive_target() {
         hook_timeout_secs: 5,
         ssh_cert: String::new(),
         notes: String::new(),
+        production: false,
+        confirm_production: false,
         ssh_agent_sock: String::new(),
     };
 
@@ -673,6 +689,8 @@ fn test_select_id_for_server_accepts_prefixed_group_suffix() {
         hook_timeout_secs: 5,
         ssh_cert: String::new(),
         notes: String::new(),
+        production: false,
+        confirm_production: false,
         ssh_agent_sock: String::new(),
     };
 

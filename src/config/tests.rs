@@ -60,6 +60,7 @@ fn test_resolve_applies_interpolation() {
             environments: None,
             tunnels: None,
             tags: None,
+            production: None,
             servers: Some(vec![Server {
                 name: "jump-srv".to_string(),
                 host: "{{ jump }}".to_string(),
@@ -73,6 +74,7 @@ fn test_resolve_applies_interpolation() {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 ..Default::default()
             }]),
         })],
@@ -174,6 +176,7 @@ fn test_resolve_inherits_wallix_group_from_defaults_wallix() {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 pre_connect_hook: None,
                 post_disconnect_hook: None,
                 notes: None,
@@ -182,6 +185,7 @@ fn test_resolve_inherits_wallix_group_from_defaults_wallix() {
             probe_filesystems: None,
             tunnels: None,
             tags: None,
+            production: None,
         })],
         includes: vec![],
         vars: Default::default(),
@@ -259,11 +263,13 @@ fn test_resolve_wallix_group_env_override_wins_over_global() {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
             }]),
             servers: None,
             probe_filesystems: None,
             tunnels: None,
             tags: None,
+            production: None,
         })],
         includes: vec![],
         vars: Default::default(),
@@ -310,6 +316,7 @@ fn test_sorting_mixed() {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
             }),
             ConfigEntry::Server(Server {
                 name: "Alpha".to_string(),
@@ -324,6 +331,7 @@ fn test_sorting_mixed() {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 ..Default::default()
             }),
             ConfigEntry::Group(Group {
@@ -341,6 +349,7 @@ fn test_sorting_mixed() {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
             }),
         ],
         includes: vec![],
@@ -384,6 +393,7 @@ fn test_resolve_inheritance_chain() {
             jump: None,
             probe_filesystems: None,
             tags: None,
+            production: None,
             environments: Some(vec![Environment {
                 name: "Env1".to_string(),
                 user: None, // Inherits "group_user"
@@ -397,6 +407,7 @@ fn test_resolve_inheritance_chain() {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 servers: vec![Server {
                     name: "S1".to_string(),
                     host: "203.0.113.1".to_string(),
@@ -410,6 +421,7 @@ fn test_resolve_inheritance_chain() {
                     probe_filesystems: None,
                     tunnels: None,
                     tags: None,
+                    production: None,
                     ..Default::default()
                 }],
             }]),
@@ -449,6 +461,7 @@ fn test_probe_filesystems_inheritance() {
             environments: None,
             tunnels: None,
             tags: None,
+            production: None,
             servers: Some(vec![
                 Server {
                     name: "inherits".to_string(),
@@ -463,6 +476,7 @@ fn test_probe_filesystems_inheritance() {
                     probe_filesystems: None, // hérite du groupe → defaults
                     tunnels: None,
                     tags: None,
+                    production: None,
                     ..Default::default()
                 },
                 Server {
@@ -478,6 +492,7 @@ fn test_probe_filesystems_inheritance() {
                     probe_filesystems: Some(vec!["/mnt/nas".to_string()]), // s'ajoute aux defaults
                     tunnels: None,
                     tags: None,
+                    production: None,
                     ..Default::default()
                 },
             ]),
@@ -527,6 +542,7 @@ fn test_probe_filesystems_group_extends_defaults() {
             environments: None,
             tunnels: None,
             tags: None,
+            production: None,
             servers: Some(vec![Server {
                 name: "kafka01".to_string(),
                 host: "198.51.100.1".to_string(),
@@ -540,6 +556,7 @@ fn test_probe_filesystems_group_extends_defaults() {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 ..Default::default()
             }]),
         })],
@@ -1195,6 +1212,7 @@ fn make_group(name: &str, servers: Vec<Server>) -> Group {
         probe_filesystems: None,
         tunnels: None,
         tags: None,
+        production: None,
         environments: None,
         servers: Some(servers),
     }
@@ -1214,6 +1232,7 @@ fn make_group_with_env(name: &str, envs: Vec<Environment>) -> Group {
         probe_filesystems: None,
         tunnels: None,
         tags: None,
+        production: None,
         environments: Some(envs),
         servers: None,
     }
@@ -1233,6 +1252,7 @@ fn make_env(name: &str, servers: Vec<Server>) -> Environment {
         probe_filesystems: None,
         tunnels: None,
         tags: None,
+        production: None,
         servers,
     }
 }
@@ -2346,4 +2366,178 @@ fn test_git_outdated_dedups_same_repo() {
         1,
         "expected deduped warning, got: {warnings:?}"
     );
+}
+
+// ─── Production flag ──────────────────────────────────────────────────────
+
+fn resolve_yaml(yaml: &str) -> Vec<ResolvedServer> {
+    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    config.resolve().unwrap()
+}
+
+fn env_yaml(env_name: &str, env_extra: &str) -> String {
+    format!(
+        r#"
+groups:
+  - name: G
+    environments:
+      - name: {env_name}
+{env_extra}
+        servers:
+          - name: srv
+            host: "203.0.113.4"
+"#
+    )
+}
+
+#[test]
+fn test_production_autodetect_from_env_name() {
+    for name in ["prod", "Production", "PRD", " prod "] {
+        let servers = resolve_yaml(&env_yaml(&format!("\"{name}\""), ""));
+        assert!(servers[0].production, "env '{name}' should be production");
+    }
+}
+
+#[test]
+fn test_production_autodetect_ignores_lookalike_env_names() {
+    for name in ["preprod", "product-api", "staging", "dev"] {
+        let servers = resolve_yaml(&env_yaml(name, ""));
+        assert!(
+            !servers[0].production,
+            "env '{name}' must not be production"
+        );
+    }
+}
+
+#[test]
+fn test_production_explicit_false_overrides_autodetect() {
+    let servers = resolve_yaml(&env_yaml("prod", "        production: false"));
+    assert!(!servers[0].production);
+}
+
+#[test]
+fn test_production_explicit_true_on_env() {
+    let servers = resolve_yaml(&env_yaml("staging", "        production: true"));
+    assert!(servers[0].production);
+}
+
+#[test]
+fn test_production_inherited_from_group_and_overridden_by_server() {
+    let yaml = r#"
+groups:
+  - name: G
+    production: true
+    environments:
+      - name: dev
+        servers:
+          - name: inherits
+            host: "203.0.113.4"
+          - name: opts-out
+            host: "203.0.113.5"
+            production: false
+"#;
+    let servers = resolve_yaml(yaml);
+    let by_name = |n: &str| servers.iter().find(|s| s.name == n).unwrap();
+    assert!(by_name("inherits").production);
+    assert!(!by_name("opts-out").production);
+}
+
+#[test]
+fn test_production_inherited_from_defaults() {
+    let yaml = r#"
+defaults:
+  production: true
+groups:
+  - name: G
+    servers:
+      - name: srv
+        host: "203.0.113.4"
+"#;
+    assert!(resolve_yaml(yaml)[0].production);
+}
+
+#[test]
+fn test_production_explicit_server_true_without_env() {
+    let yaml = r#"
+groups:
+  - name: G
+    servers:
+      - name: srv
+        host: "203.0.113.4"
+        production: true
+"#;
+    assert!(resolve_yaml(yaml)[0].production);
+}
+
+#[test]
+fn test_production_absent_is_false() {
+    let yaml = r#"
+groups:
+  - name: G
+    servers:
+      - name: srv
+        host: "203.0.113.4"
+"#;
+    assert!(!resolve_yaml(yaml)[0].production);
+}
+
+#[test]
+fn test_confirm_production_defaults_to_false() {
+    let servers = resolve_yaml(&env_yaml("prod", ""));
+    assert!(!servers[0].confirm_production);
+}
+
+#[test]
+fn test_confirm_production_from_defaults() {
+    let yaml = r#"
+defaults:
+  confirm_production: true
+groups:
+  - name: G
+    servers:
+      - name: srv
+        host: "203.0.113.4"
+"#;
+    assert!(resolve_yaml(yaml)[0].confirm_production);
+}
+
+#[test]
+fn test_validation_accepts_production_fields() {
+    let yaml = r#"
+defaults:
+  production: false
+  confirm_production: true
+groups:
+  - name: G
+    production: true
+    environments:
+      - name: prod
+        production: true
+        servers:
+          - name: srv
+            host: "203.0.113.4"
+            production: true
+    servers:
+      - name: s2
+        host: "203.0.113.5"
+        production: false
+"#;
+    let warnings = validate_yaml(yaml, "test.yml");
+    assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+}
+
+#[test]
+fn test_merge_default_structs_production_fields() {
+    let base = Defaults {
+        production: Some(true),
+        confirm_production: Some(true),
+        ..Default::default()
+    };
+    let over = Defaults {
+        production: Some(false),
+        ..Default::default()
+    };
+    let merged = merge_default_structs(&base, &over);
+    assert_eq!(merged.production, Some(false));
+    assert_eq!(merged.confirm_production, Some(true));
 }

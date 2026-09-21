@@ -50,7 +50,8 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         panels::draw_pinned_server(f, app, main_chunks[2]);
     }
 
-    panels::draw_status_bar(f, app, chunks[3]);
+    let selected_is_production = app.selected_server().is_some_and(|s| s.production);
+    panels::draw_status_bar(f, app, chunks[3], selected_is_production);
 
     // Overlay wizard première configuration — affiché au tout premier lancement,
     // avant tout autre overlay (rien d'autre ne peut être actif simultanément).
@@ -76,6 +77,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     // Overlay saisie credential — au-dessus de tout sauf les erreurs
     if matches!(&app.app_mode, AppMode::CredentialInput { .. }) {
         overlays::draw_credential_input_overlay(f, app, f.area());
+    }
+
+    // Overlay confirmation production — au-dessus de tout sauf les erreurs
+    if matches!(&app.app_mode, AppMode::ConfirmProduction { .. }) {
+        overlays::draw_production_confirm_overlay(f, app, f.area());
     }
 
     // Overlay dashboard overview
