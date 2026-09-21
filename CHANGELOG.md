@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.23.0] — 2026-09-21
+
+### Added
+
+- Flag production servers with badge and opt-in confirmation ([#209](https://github.com/yatoub/susshi/pull/209))
+
+
 ## [0.22.2] — 2026-09-21
 
 ### Fixed
