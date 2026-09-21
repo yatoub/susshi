@@ -367,6 +367,7 @@ fn resolve_entries(
                 let g_jump = merge_jump(&d.jump, &group.jump);
                 let g_tunnels = replace_tunnels(&d.tunnels, &group.tunnels);
                 let g_tags = extend_tags(d.tags.as_ref(), group.tags.as_ref());
+                let g_production = group.production.or(d.production);
 
                 if let Some(envs) = &group.environments {
                     for env in envs {
@@ -389,6 +390,7 @@ fn resolve_entries(
                         let e_jump = merge_jump(&g_jump, &env.jump);
                         let e_tunnels = replace_tunnels(&g_tunnels, &env.tunnels);
                         let e_tags = extend_tags(Some(&g_tags), env.tags.as_ref());
+                        let e_production = env.production.or(g_production);
 
                         let env_def = ServerDefaults {
                             user: e_user,
@@ -416,6 +418,8 @@ fn resolve_entries(
                             post_disconnect_hook: d.post_disconnect_hook.as_deref(),
                             hook_timeout_secs: d.hook_timeout_secs.unwrap_or(5),
                             tags: e_tags,
+                            production: e_production,
+                            confirm_production: d.confirm_production.unwrap_or(false),
                         };
                         for server in &env.servers {
                             let r = resolve_server(server, &group.name, &env.name, &env_def)?;
@@ -448,6 +452,8 @@ fn resolve_entries(
                         post_disconnect_hook: d.post_disconnect_hook.as_deref(),
                         hook_timeout_secs: d.hook_timeout_secs.unwrap_or(5),
                         tags: g_tags.clone(),
+                        production: g_production,
+                        confirm_production: d.confirm_production.unwrap_or(false),
                     };
                     for server in servers {
                         let r = resolve_server(server, &group.name, "", &grp_def)?;
@@ -480,6 +486,8 @@ fn resolve_entries(
                     post_disconnect_hook: d.post_disconnect_hook.as_deref(),
                     hook_timeout_secs: d.hook_timeout_secs.unwrap_or(5),
                     tags: extend_tags(None, d.tags.as_ref()),
+                    production: d.production,
+                    confirm_production: d.confirm_production.unwrap_or(false),
                 };
                 let r = resolve_server(server, "", "", &top_def)?;
                 resolved.push(r);
@@ -573,6 +581,18 @@ struct ServerDefaults<'a> {
     hook_timeout_secs: u64,
     /// Tags accumulés depuis defaults → group → env (union sans doublon).
     tags: Vec<String>,
+    /// Flag `production` hérité defaults → group → env (`None` = non défini).
+    production: Option<bool>,
+    confirm_production: bool,
+}
+
+/// Auto-détection de repli : le nom d'environnement désigne la production
+/// (`prod`, `production`, `prd`, insensible à la casse et aux espaces).
+fn is_production_env_name(env: &str) -> bool {
+    matches!(
+        env.trim().to_lowercase().as_str(),
+        "prod" | "production" | "prd"
+    )
 }
 
 fn resolve_server(
@@ -713,6 +733,11 @@ fn resolve_server(
             .map(|h| shellexpand::tilde(h).into_owned()),
         hook_timeout_secs: def_hook_timeout_secs,
         notes: s.notes.clone().unwrap_or_default(),
+        production: s
+            .production
+            .or(def.production)
+            .unwrap_or_else(|| is_production_env_name(env)),
+        confirm_production: def.confirm_production,
         wallix_group: resolved_wallix_group,
         wallix_account: final_bastion
             .as_ref()

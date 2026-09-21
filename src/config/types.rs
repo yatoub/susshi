@@ -219,6 +219,13 @@ pub struct Defaults {
     pub post_disconnect_hook: Option<String>,
     /// Délai maximum accordé à un hook avant de le tuer (secondes). Défaut : 5.
     pub hook_timeout_secs: Option<u64>,
+    /// Marque par défaut les serveurs comme « production » (héritable, surchargeable
+    /// à chaque niveau). En l'absence de valeur explicite, le nom de l'environnement
+    /// (`prod`, `production`, `prd`) sert de repli.
+    pub production: Option<bool>,
+    /// Si `true`, demande une confirmation avant de se connecter à un serveur de production.
+    /// Défaut : `false`.
+    pub confirm_production: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
@@ -283,6 +290,8 @@ pub struct Group {
     pub probe_filesystems: Option<Vec<String>>,
     pub tunnels: Option<Vec<TunnelConfig>>,
     pub tags: Option<Vec<String>>,
+    /// Marque le périmètre comme « production » (voir `Defaults::production`).
+    pub production: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -300,6 +309,8 @@ pub struct Environment {
     pub probe_filesystems: Option<Vec<String>>,
     pub tunnels: Option<Vec<TunnelConfig>>,
     pub tags: Option<Vec<String>>,
+    /// Marque l'environnement comme « production » (voir `Defaults::production`).
+    pub production: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Clone, Default)]
@@ -327,6 +338,8 @@ pub struct Server {
     pub post_disconnect_hook: Option<String>,
     /// Description libre affichée dans le panneau de détail.
     pub notes: Option<String>,
+    /// Marque le serveur comme « production » (surcharge l'héritage et l'auto-détection).
+    pub production: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
@@ -394,4 +407,8 @@ pub struct ResolvedServer {
     pub hook_timeout_secs: u64,
     /// Description libre (champ `notes` du YAML).
     pub notes: String,
+    /// Serveur de production (flag explicite hérité, sinon auto-détection sur le nom d'env).
+    pub production: bool,
+    /// Demander une confirmation avant connexion quand `production` est vrai.
+    pub confirm_production: bool,
 }

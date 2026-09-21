@@ -20,6 +20,7 @@ fn make_simple_config() -> Config {
             environments: None,
             tunnels: None,
             tags: None,
+            production: None,
             servers: Some(vec![Server {
                 name: "web-01".to_string(),
                 host: "203.0.113.10".to_string(),
@@ -33,6 +34,7 @@ fn make_simple_config() -> Config {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 ..Default::default()
             }]),
         })],

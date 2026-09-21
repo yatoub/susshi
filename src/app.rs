@@ -74,6 +74,12 @@ pub enum AppMode {
         is_passphrase: bool,
         input: String,
     },
+    /// Confirmation demandée avant de se connecter à un serveur de production.
+    ConfirmProduction {
+        server: Box<ResolvedServer>,
+        mode: ConnectionMode,
+        verbose: bool,
+    },
 }
 
 impl PartialEq for AppMode {
@@ -557,6 +563,10 @@ mod tests_visibility;
 #[cfg(test)]
 #[path = "app/tests_credential_input.rs"]
 mod tests_credential_input;
+
+#[cfg(test)]
+#[path = "app/tests_production.rs"]
+mod tests_production;
 
 #[cfg(test)]
 #[path = "app/tests_reload.rs"]

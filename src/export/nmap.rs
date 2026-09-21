@@ -85,6 +85,8 @@ mod tests {
             wallix_authorization: None,
             wallix_header_columns: vec![],
             notes: String::new(),
+            production: false,
+            confirm_production: false,
         }
     }
 

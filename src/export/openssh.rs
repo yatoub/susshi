@@ -80,6 +80,8 @@ mod tests {
             namespace: String::new(),
             tags: vec![],
             notes: String::new(),
+            production: false,
+            confirm_production: false,
             default_mode: mode,
             jump_host: None,
             bastion_host: None,

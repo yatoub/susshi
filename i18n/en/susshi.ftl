@@ -259,3 +259,10 @@ wizard-error-group-name = Group name is required
 wizard-error-server-name = Server name is required
 wizard-error-host = Host is required
 wizard-created = ~/.susshi.yml created — welcome aboard!
+
+# Production indicator
+badge-production = PROD
+label-production = ⚠ PRODUCTION
+production-confirm-title = ⚠ Production — { $server }
+production-confirm-message =   Connect to { $host } ?
+production-confirm-hint =   y confirm   n / Esc cancel

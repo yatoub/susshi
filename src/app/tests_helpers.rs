@@ -32,6 +32,7 @@ pub(super) fn make_namespace_env_config() -> Config {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 environments: Some(vec![Environment {
                     name: "EnvA".to_string(),
                     user: None,
@@ -45,6 +46,7 @@ pub(super) fn make_namespace_env_config() -> Config {
                     probe_filesystems: None,
                     tunnels: None,
                     tags: None,
+                    production: None,
                     servers: vec![Server {
                         name: "ns_srv".to_string(),
                         host: "198.51.100.10".to_string(),
@@ -58,6 +60,7 @@ pub(super) fn make_namespace_env_config() -> Config {
                         probe_filesystems: None,
                         tunnels: None,
                         tags: None,
+                        production: None,
                         ..Default::default()
                     }],
                 }]),
@@ -89,6 +92,7 @@ pub(super) fn make_namespace_config() -> Config {
                 environments: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 servers: Some(vec![Server {
                     name: "root_srv".to_string(),
                     host: "203.0.113.1".to_string(),
@@ -102,6 +106,7 @@ pub(super) fn make_namespace_config() -> Config {
                     probe_filesystems: None,
                     tunnels: None,
                     tags: None,
+                    production: None,
                     ..Default::default()
                 }]),
             }),
@@ -124,6 +129,7 @@ pub(super) fn make_namespace_config() -> Config {
                     environments: None,
                     tunnels: None,
                     tags: None,
+                    production: None,
                     servers: Some(vec![Server {
                         name: "ces_srv".to_string(),
                         host: "203.0.113.2".to_string(),
@@ -137,6 +143,7 @@ pub(super) fn make_namespace_config() -> Config {
                         probe_filesystems: None,
                         tunnels: None,
                         tags: None,
+                        production: None,
                         ..Default::default()
                     }]),
                 })],

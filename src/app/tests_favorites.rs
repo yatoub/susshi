@@ -20,6 +20,7 @@ fn make_app_with_server() -> App {
             environments: None,
             tunnels: None,
             tags: None,
+            production: None,
             servers: Some(vec![Server {
                 name: "srv1".into(),
                 host: "10.0.0.1".into(),

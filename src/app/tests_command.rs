@@ -19,6 +19,7 @@ fn make_simple_app() -> App {
             environments: None,
             tunnels: None,
             tags: None,
+            production: None,
             servers: Some(vec![Server {
                 name: "s".to_string(),
                 host: "10.0.0.1".to_string(),
@@ -32,6 +33,7 @@ fn make_simple_app() -> App {
                 probe_filesystems: None,
                 tunnels: None,
                 tags: None,
+                production: None,
                 ..Default::default()
             }]),
         })],

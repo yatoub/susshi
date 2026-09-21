@@ -505,6 +505,8 @@ mod tests {
             hook_timeout_secs: 5,
             ssh_cert: String::new(),
             notes: String::new(),
+            production: false,
+            confirm_production: false,
             ssh_agent_sock: String::new(),
         };
 

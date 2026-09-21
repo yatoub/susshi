@@ -19,6 +19,7 @@ fn make_app_two_servers() -> App {
             environments: None,
             tunnels: None,
             tags: None,
+            production: None,
             servers: Some(vec![
                 Server {
                     name: "s1".to_string(),
@@ -33,6 +34,7 @@ fn make_app_two_servers() -> App {
                     probe_filesystems: None,
                     tunnels: None,
                     tags: None,
+                    production: None,
                     ..Default::default()
                 },
                 Server {
@@ -48,6 +50,7 @@ fn make_app_two_servers() -> App {
                     probe_filesystems: None,
                     tunnels: None,
                     tags: None,
+                    production: None,
                     ..Default::default()
                 },
             ]),

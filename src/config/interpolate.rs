@@ -132,5 +132,7 @@ pub(crate) fn merge_default_structs(base: &Defaults, overrides: &Defaults) -> De
             .clone()
             .or_else(|| base.post_disconnect_hook.clone()),
         hook_timeout_secs: overrides.hook_timeout_secs.or(base.hook_timeout_secs),
+        production: overrides.production.or(base.production),
+        confirm_production: overrides.confirm_production.or(base.confirm_production),
     }
 }

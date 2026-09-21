@@ -452,6 +452,8 @@ fn build_adhoc_server(
             .map(|h| shellexpand::tilde(h).into_owned()),
         hook_timeout_secs: d.hook_timeout_secs.unwrap_or(5),
         notes: String::new(),
+        production: false,
+        confirm_production: false,
         ssh_agent_sock: String::new(),
         wallix_group: None,
         wallix_account: d
@@ -804,6 +806,23 @@ pub enum AppResult {
     ),
 }
 
+/// Lance la connexion : ouvre le sélecteur Wallix si nécessaire, sinon retourne
+/// directement le résultat `Connect`. Appelé après l'éventuelle confirmation production.
+fn begin_connect(
+    app: &mut App,
+    server: Box<susshi::config::ResolvedServer>,
+    mode: ConnectionMode,
+    verbose: bool,
+) -> Option<AppResult> {
+    if app.should_open_wallix_selector(&server) {
+        app.open_wallix_selector(*server, verbose);
+        None
+    } else {
+        app.record_connection(&server);
+        Some(AppResult::Connect(server, mode, verbose))
+    }
+}
+
 fn run_app(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
     app: &mut App,
@@ -911,6 +930,24 @@ fn run_app(
                             }
                             KeyCode::Backspace => {
                                 app.credential_input_backspace();
+                            }
+                            _ => {}
+                        }
+                    } else if matches!(app.app_mode, AppMode::ConfirmProduction { .. }) {
+                        // Seule `y` valide : Enter est volontairement ignoré pour qu'un
+                        // double appui réflexe ne contourne pas la confirmation.
+                        match key.code {
+                            KeyCode::Char('y') | KeyCode::Char('Y') => {
+                                if let Some((server, mode, verbose)) =
+                                    app.accept_production_confirm()
+                                    && let Some(result) =
+                                        begin_connect(app, Box::new(server), mode, verbose)
+                                {
+                                    return Ok(result);
+                                }
+                            }
+                            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+                                app.cancel_production_confirm();
                             }
                             _ => {}
                         }
@@ -1351,18 +1388,14 @@ fn run_app(
                                 };
                                 match action {
                                     Some(Ok(server)) => {
-                                        if app.should_open_wallix_selector(&server) {
-                                            app.open_wallix_selector(
-                                                (*server).clone(),
-                                                app.verbose_mode,
-                                            );
-                                        } else {
-                                            app.record_connection(&server);
-                                            return Ok(AppResult::Connect(
-                                                server,
-                                                app.connection_mode,
-                                                app.verbose_mode,
-                                            ));
+                                        let (mode, verbose) =
+                                            (app.connection_mode, app.verbose_mode);
+                                        if app.needs_production_confirmation(&server) {
+                                            app.open_production_confirm(*server, mode, verbose);
+                                        } else if let Some(result) =
+                                            begin_connect(app, server, mode, verbose)
+                                        {
+                                            return Ok(result);
                                         }
                                     }
                                     Some(Err(msg)) => app.set_error(msg),
@@ -1402,18 +1435,14 @@ fn run_app(
                                 };
                                 match action {
                                     Some(Ok(server)) => {
-                                        if app.should_open_wallix_selector(&server) {
-                                            app.open_wallix_selector(
-                                                (*server).clone(),
-                                                app.verbose_mode,
-                                            );
-                                        } else {
-                                            app.record_connection(&server);
-                                            return Ok(AppResult::Connect(
-                                                server,
-                                                app.connection_mode,
-                                                app.verbose_mode,
-                                            ));
+                                        let (mode, verbose) =
+                                            (app.connection_mode, app.verbose_mode);
+                                        if app.needs_production_confirmation(&server) {
+                                            app.open_production_confirm(*server, mode, verbose);
+                                        } else if let Some(result) =
+                                            begin_connect(app, server, mode, verbose)
+                                        {
+                                            return Ok(result);
                                         }
                                     }
                                     Some(Err(msg)) => app.set_error(msg),

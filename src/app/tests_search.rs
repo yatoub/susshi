@@ -19,6 +19,7 @@ fn make_tagged_config() -> Config {
             environments: None,
             tunnels: None,
             tags: None,
+            production: None,
             servers: Some(vec![
                 Server {
                     name: "prod-web".to_string(),
