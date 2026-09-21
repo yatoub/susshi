@@ -1229,36 +1229,36 @@
 <h2 id="list-servers-as-json">List Servers as JSON<a class="headerlink" href="#list-servers-as-json" title="Permanent link">&para;</a></h2>
 <p>Print all resolved servers as a JSON array — ready for <code>jq</code> or <code>fzf</code> pipelines:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>susshi<span class="w"> </span>--list
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>susshi<span class="w"> </span>--list<span class="w"> </span>--list-filter<span class="w"> </span><span class="s2">&quot;web&quot;</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>susshi<span class="w"> </span>--list<span class="w"> </span>--list-filter<span class="w"> </span><span class="s2">&quot;#prod&quot;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>susshi<span class="w"> </span>--list<span class="w"> </span>--list-filter<span class="w"> </span><span class="s2">"web"</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>susshi<span class="w"> </span>--list<span class="w"> </span>--list-filter<span class="w"> </span><span class="s2">"#prod"</span>
 </code></pre></div>
 <p>Each object contains: <code>name</code>, <code>host</code>, <code>user</code>, <code>port</code>, <code>group</code>, <code>env</code>, <code>namespace</code>, <code>tags</code>, <code>mode</code>.</p>
 <p>Example pipelines:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Pick a server with fzf and connect</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>susshi<span class="w"> </span>--list<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">&#39;.[].name&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>-I<span class="o">{}</span><span class="w"> </span>susshi<span class="w"> </span>--direct<span class="w"> </span><span class="o">{}</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>susshi<span class="w"> </span>--list<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.[].name'</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>fzf<span class="w"> </span><span class="p">|</span><span class="w"> </span>xargs<span class="w"> </span>-I<span class="o">{}</span><span class="w"> </span>susshi<span class="w"> </span>--direct<span class="w"> </span><span class="o">{}</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Show all hostnames tagged prod</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>susshi<span class="w"> </span>--list<span class="w"> </span>--list-filter<span class="w"> </span><span class="s2">&quot;#prod&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">&#39;.[].host&#39;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>susshi<span class="w"> </span>--list<span class="w"> </span>--list-filter<span class="w"> </span><span class="s2">"#prod"</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.[].host'</span>
 </code></pre></div>
 <h2 id="export-inventory">Export Inventory<a class="headerlink" href="#export-inventory" title="Permanent link">&para;</a></h2>
 <p>All export commands support <code>--export-filter</code> with the same text and <code>#tag</code> syntax as the TUI search bar. Output goes to stdout unless <code>--export-output &lt;file&gt;</code> is specified.</p>
 <h3 id="ansible">Ansible<a class="headerlink" href="#ansible" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>susshi<span class="w"> </span>--export<span class="w"> </span>ansible
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>susshi<span class="w"> </span>--export<span class="w"> </span>ansible<span class="w"> </span>--export-output<span class="w"> </span>~/inventory.yml
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>susshi<span class="w"> </span>--export<span class="w"> </span>ansible<span class="w"> </span>--export-filter<span class="w"> </span><span class="s2">&quot;#prod&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>susshi<span class="w"> </span>--export<span class="w"> </span>ansible<span class="w"> </span>--export-filter<span class="w"> </span><span class="s2">"#prod"</span>
 </code></pre></div>
 <p>Produces a standard Ansible YAML inventory with groups mapped from susshi groups and environments.</p>
 <h3 id="terraform">Terraform<a class="headerlink" href="#terraform" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>susshi<span class="w"> </span>--export<span class="w"> </span>terraform
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>susshi<span class="w"> </span>--export<span class="w"> </span>terraform<span class="w"> </span>--export-output<span class="w"> </span>inventory.json
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>susshi<span class="w"> </span>--export<span class="w"> </span>terraform<span class="w"> </span>--export-filter<span class="w"> </span><span class="s2">&quot;#prod&quot;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>susshi<span class="w"> </span>--export<span class="w"> </span>terraform<span class="w"> </span>--export-filter<span class="w"> </span><span class="s2">"#prod"</span>
 </code></pre></div>
 <p>Produces a JSON file loadable with <code>jsondecode(file(...))</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nb">locals</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="na">susshi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">jsondecode</span><span class="p">(</span><span class="nf">file</span><span class="p">(</span><span class="s2">&quot;${path.module}/inventory.json&quot;</span><span class="p">))</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="na">susshi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">jsondecode</span><span class="p">(</span><span class="nf">file</span><span class="p">(</span><span class="s2">"${path.module}/inventory.json"</span><span class="p">))</span>
 <a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="p">}</span>
 <a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="kr">resource</span><span class="w"> </span><span class="nc">&quot;null_resource&quot;</span><span class="w"> </span><span class="nv">&quot;ping&quot;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="kr">resource</span><span class="w"> </span><span class="nc">"null_resource"</span><span class="w"> </span><span class="nv">"ping"</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nb">for_each</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="err">for</span><span class="w"> </span><span class="err">s</span><span class="w"> </span><span class="err">in</span><span class="w"> </span><span class="nv">local.susshi.servers</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nv">s.name</span><span class="w"> </span><span class="p">=</span><span class="err">&gt;</span><span class="w"> </span><span class="err">s</span><span class="w"> </span><span class="p">}</span>
 <a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1">  # each.value.host, each.value.user, each.value.port, …</span>
 <a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">}</span>
@@ -1266,7 +1266,7 @@
 <h3 id="nmap-masscan">Nmap / masscan<a class="headerlink" href="#nmap-masscan" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>susshi<span class="w"> </span>--export<span class="w"> </span>nmap
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>susshi<span class="w"> </span>--export<span class="w"> </span>nmap<span class="w"> </span>--export-output<span class="w"> </span>targets.txt
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>susshi<span class="w"> </span>--export<span class="w"> </span>nmap<span class="w"> </span>--export-filter<span class="w"> </span><span class="s2">&quot;#prod&quot;</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>susshi<span class="w"> </span>--export<span class="w"> </span>nmap<span class="w"> </span>--export-filter<span class="w"> </span><span class="s2">"#prod"</span>
 <a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
 <a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>nmap<span class="w"> </span>-iL<span class="w"> </span>targets.txt<span class="w"> </span>-p<span class="w"> </span><span class="m">22</span><span class="w"> </span>-sV
 <a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>masscan<span class="w"> </span>-iL<span class="w"> </span>targets.txt<span class="w"> </span>-p<span class="w"> </span><span class="m">22</span>
@@ -1275,14 +1275,14 @@
 <p>Columns: <code>name</code>, <code>host</code>, <code>user</code>, <code>port</code>, <code>ssh_key</code>, <code>group</code>, <code>env</code>, <code>namespace</code>, <code>tags</code>, <code>notes</code>.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>susshi<span class="w"> </span>--export<span class="w"> </span>csv
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>susshi<span class="w"> </span>--export<span class="w"> </span>csv<span class="w"> </span>--export-output<span class="w"> </span>~/servers.csv
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>susshi<span class="w"> </span>--export<span class="w"> </span>csv<span class="w"> </span>--export-filter<span class="w"> </span><span class="s2">&quot;#prod&quot;</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>susshi<span class="w"> </span>--export<span class="w"> </span>csv<span class="w"> </span>--export-filter<span class="w"> </span><span class="s2">"#prod"</span>
 </code></pre></div>
 <p>Fields with commas, double-quotes, or newlines are quoted per RFC 4180. Multiple tags are joined with <code>;</code>.</p>
 <h3 id="openssh-config">OpenSSH Config<a class="headerlink" href="#openssh-config" title="Permanent link">&para;</a></h3>
 <p>Exports servers as <code>Host</code> blocks compatible with <code>~/.ssh/config</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>susshi<span class="w"> </span>--export<span class="w"> </span>openssh
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>susshi<span class="w"> </span>--export<span class="w"> </span>openssh<span class="w"> </span>--export-output<span class="w"> </span>~/.ssh/config.d/susshi
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>susshi<span class="w"> </span>--export<span class="w"> </span>openssh<span class="w"> </span>--export-filter<span class="w"> </span><span class="s2">&quot;#prod&quot;</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>susshi<span class="w"> </span>--export<span class="w"> </span>openssh<span class="w"> </span>--export-filter<span class="w"> </span><span class="s2">"#prod"</span>
 </code></pre></div>
 <p>Each server produces a <code>Host</code> block with <code>HostName</code>, <code>User</code>, <code>Port</code> (if not 22), <code>IdentityFile</code>, <code>ProxyJump</code> (jump mode), and <code>IdentityAgent</code> (if <code>ssh_agent_sock</code> is set). Wallix servers are exported as direct blocks — their bastion routing is not representable in standard SSH config.</p>
 

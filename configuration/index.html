@@ -737,6 +737,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#production-servers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production servers
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1322,6 +1333,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#production-servers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production servers
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1420,7 +1442,7 @@
 <tbody>
 <tr>
 <td><strong>OVERRIDE</strong></td>
-<td><code>user</code>, <code>ssh_key</code>, <code>ssh_cert</code>, <code>ssh_agent_sock</code>, <code>ssh_port</code>, <code>mode</code>, <code>ssh_options</code>, <code>wallix</code>, <code>jump</code></td>
+<td><code>user</code>, <code>ssh_key</code>, <code>ssh_cert</code>, <code>ssh_agent_sock</code>, <code>ssh_port</code>, <code>mode</code>, <code>ssh_options</code>, <code>wallix</code>, <code>jump</code>, <code>production</code></td>
 <td>Lower level replaces the parent value entirely</td>
 </tr>
 <tr>
@@ -1435,7 +1457,7 @@
 </tr>
 </tbody>
 </table>
-<p>Fields only available in <code>defaults</code> (not overridable per group/env/server): <code>theme</code>, <code>keep_open</code>, <code>default_filter</code>, <code>use_system_ssh_config</code>, <code>control_master</code>, <code>agent_forwarding</code>, <code>control_path</code>, <code>control_persist</code>, <code>pre_connect_hook</code>, <code>post_disconnect_hook</code>, <code>hook_timeout_secs</code>.</p>
+<p>Fields only available in <code>defaults</code> (not overridable per group/env/server): <code>theme</code>, <code>keep_open</code>, <code>default_filter</code>, <code>use_system_ssh_config</code>, <code>control_master</code>, <code>agent_forwarding</code>, <code>control_path</code>, <code>control_persist</code>, <code>pre_connect_hook</code>, <code>post_disconnect_hook</code>, <code>hook_timeout_secs</code>, <code>confirm_production</code>.</p>
 <h3 id="field-availability-per-level">Field availability per level<a class="headerlink" href="#field-availability-per-level" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
@@ -1617,6 +1639,20 @@
 <td style="text-align: center;">—</td>
 </tr>
 <tr>
+<td><code>production</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">✓</td>
+</tr>
+<tr>
+<td><code>confirm_production</code></td>
+<td style="text-align: center;">✓</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+<td style="text-align: center;">—</td>
+</tr>
+<tr>
 <td><code>name</code></td>
 <td style="text-align: center;">—</td>
 <td style="text-align: center;">✓</td>
@@ -1693,6 +1729,14 @@
 <td><code>false</code></td>
 </tr>
 <tr>
+<td><code>production</code></td>
+<td>auto-detected from the environment name (see below)</td>
+</tr>
+<tr>
+<td><code>confirm_production</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
 <td><code>wallix.auto_select</code></td>
 <td><code>true</code></td>
 </tr>
@@ -1722,10 +1766,10 @@
 <h2 id="includes-multi-file-configuration"><code>includes</code> (Multi-file Configuration)<a class="headerlink" href="#includes-multi-file-configuration" title="Permanent link">&para;</a></h2>
 <p>Use <code>includes</code> to split configuration by team, perimeter, or environment:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">includes</span><span class="p">:</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;DEV&quot;</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;~/.susshi_dev.yml&quot;</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;QUALIF&quot;</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;~/.susshi_qualif.yml&quot;</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">"DEV"</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">"~/.susshi_dev.yml"</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">"QUALIF"</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">"~/.susshi_qualif.yml"</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">merge_defaults</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </code></pre></div>
 <p>Fields:</p>
@@ -1737,8 +1781,8 @@
 <h3 id="https-includes">HTTPS includes<a class="headerlink" href="#https-includes" title="Permanent link">&para;</a></h3>
 <p><code>path</code> can be a full HTTPS URL. susshi will fetch the file over TLS at startup:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">includes</span><span class="p">:</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;SHARED&quot;</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://inventory.example.com/team-servers.yml&quot;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">"SHARED"</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="s">"https://inventory.example.com/team-servers.yml"</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">merge_defaults</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </code></pre></div>
 <p>Behavior:</p>
@@ -1761,24 +1805,24 @@
 <h3 id="jump-block">Jump block<a class="headerlink" href="#jump-block" title="Permanent link">&para;</a></h3>
 <p><code>jump</code> is always a list (even for one host). The entire list is replaced by a child level that defines <code>jump</code>:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">jump</span><span class="p">:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;jump1.example.com&quot;</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;jump-user&quot;</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;jump2.example.com&quot;</span><span class="w">    </span><span class="c1"># multi-hop: second hop</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;jump-user&quot;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">"jump1.example.com"</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="s">"jump-user"</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">"jump2.example.com"</span><span class="w">    </span><span class="c1"># multi-hop: second hop</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="s">"jump-user"</span>
 </code></pre></div>
 <h3 id="wallix-block">Wallix block<a class="headerlink" href="#wallix-block" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">wallix</span><span class="p">:</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bastion.example.com&quot;</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bastion-user&quot;</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">group</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;devops-admins&quot;</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">account</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;default&quot;</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;SSH&quot;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">"bastion.example.com"</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">user</span><span class="p">:</span><span class="w"> </span><span class="s">"bastion-user"</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">group</span><span class="p">:</span><span class="w"> </span><span class="s">"devops-admins"</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">account</span><span class="p">:</span><span class="w"> </span><span class="s">"default"</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">protocol</span><span class="p">:</span><span class="w"> </span><span class="s">"SSH"</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">auto_select</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">fail_if_menu_match_error</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nt">selection_timeout_secs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
 <a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="c1"># direct: false          # set true to skip menu probe for direct-checkout targets</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span><span class="c1"># authorization: &quot;&quot;      # force exact Wallix authorization name (skips menu matching)</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">  </span><span class="c1"># header_columns: [&quot;ID&quot;, &quot;Cible&quot;, &quot;Autorisation&quot;]  # override if bastion uses different column labels</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span><span class="c1"># authorization: ""      # force exact Wallix authorization name (skips menu matching)</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">  </span><span class="c1"># header_columns: ["ID", "Cible", "Autorisation"]  # override if bastion uses different column labels</span>
 </code></pre></div>
 <p><code>bastion</code> is accepted as a backward-compatible alias key.</p>
 <p>Wallix-specific fields:</p>
@@ -1794,7 +1838,7 @@
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">local_port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5432</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nt">remote_host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">127.0.0.1</span>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">remote_port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5432</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;PostgreSQL&quot;</span><span class="w">     </span><span class="c1"># optional — auto-generated if absent</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">"PostgreSQL"</span><span class="w">     </span><span class="c1"># optional — auto-generated if absent</span>
 </code></pre></div>
 <p>Not available in <code>wallix</code> mode.</p>
 <h3 id="tags">Tags<a class="headerlink" href="#tags" title="Permanent link">&para;</a></h3>
@@ -1814,16 +1858,45 @@
 <a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="c1"># web-01 resolved tags: [infra, prod, eu-west, web]</span>
 </code></pre></div>
 <p>Tags can be used to filter servers in the TUI (<code>/</code>) or in <code>--export-filter</code>.</p>
+<h3 id="production-servers">Production servers<a class="headerlink" href="#production-servers" title="Permanent link">&para;</a></h3>
+<p>Servers flagged as production get a red <code>PROD</code> badge in the list and the status bar, and a red
+border with a <code>⚠ PRODUCTION</code> line in the details panel.</p>
+<ul>
+<li><strong>Explicit flag</strong>: <code>production: true|false</code> at any level (<code>defaults</code>, group, environment,
+  server). The most specific level wins, so a server can opt out of a production environment.</li>
+<li><strong>Auto-detection</strong> (fallback when no level sets the flag): the environment name is <code>prod</code>,
+  <code>production</code> or <code>prd</code> (case-insensitive). Names such as <code>preprod</code> or <code>product-api</code> do <strong>not</strong>
+  match.</li>
+<li><strong>Confirmation</strong> (opt-in): set <code>confirm_production: true</code> in <code>defaults</code> to be asked before
+  connecting to a production server. Only <code>y</code> confirms; <code>n</code> or <code>Esc</code> cancels (<code>Enter</code> is
+  ignored on purpose, so a reflex double-press cannot bypass it).</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">defaults</span><span class="p">:</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">confirm_production</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="nt">groups</span><span class="p">:</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Shop</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">environments</span><span class="p">:</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prod</span><span class="w">          </span><span class="c1"># auto-detected</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="nt">servers</span><span class="p">:</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">web-1</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">            </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">203.0.113.10</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">staging</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">        </span><span class="nt">production</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">    </span><span class="c1"># explicit flag</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">        </span><span class="nt">servers</span><span class="p">:</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">web-stg</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">            </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">203.0.113.20</span>
+</code></pre></div>
 <hr />
 <h2 id="_vars-and-interpolation"><code>_vars</code> and Interpolation<a class="headerlink" href="#_vars-and-interpolation" title="Permanent link">&para;</a></h2>
 <p>Define per-file variables:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">_vars</span><span class="p">:</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">bastion</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;bastion.prod.example.com&quot;</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;prod&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">_vars</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">bastion</span><span class="p">:</span><span class="w"> </span><span class="s">"bastion.prod.example.com"</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">env</span><span class="p">:</span><span class="w"> </span><span class="s">"prod"</span>
 </code></pre></div>
 <p>Use placeholders in any string field:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;api-{{</span><span class="nv"> </span><span class="s">env</span><span class="nv"> </span><span class="s">}}&quot;</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">bastion</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"api-{{</span><span class="nv"> </span><span class="s">env</span><span class="nv"> </span><span class="s">}}"</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="s">"{{</span><span class="nv"> </span><span class="s">bastion</span><span class="nv"> </span><span class="s">}}"</span>
 </code></pre></div>
 <p>Rules:</p>
 <ul>

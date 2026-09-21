@@ -1162,8 +1162,8 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nt">servers</span><span class="p">:</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bastion-jump</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">jump.example.com</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">ssh_key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;~/.ssh/id_ed25519&quot;</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">ssh_cert</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;~/.ssh/id_ed25519-cert.pub&quot;</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nt">ssh_key</span><span class="p">:</span><span class="w"> </span><span class="s">"~/.ssh/id_ed25519"</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">ssh_cert</span><span class="p">:</span><span class="w"> </span><span class="s">"~/.ssh/id_ed25519-cert.pub"</span>
 </code></pre></div>
 <p>susshi passes both as <code>-i &lt;ssh_key&gt; -i &lt;ssh_cert&gt;</code> to the <code>ssh</code> binary. Use this when your CA signs short-lived certificates for authentication.</p>
 <h2 id="ssh-agent-socket-ssh_agent_sock">SSH Agent Socket (<code>ssh_agent_sock</code>)<a class="headerlink" href="#ssh-agent-socket-ssh_agent_sock" title="Permanent link">&para;</a></h2>
@@ -1171,7 +1171,7 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">servers</span><span class="p">:</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">secure-host</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">host</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">198.51.100.50</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">ssh_agent_sock</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/run/user/1000/gnupg/S.gpg-agent.ssh&quot;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">ssh_agent_sock</span><span class="p">:</span><span class="w"> </span><span class="s">"/run/user/1000/gnupg/S.gpg-agent.ssh"</span>
 </code></pre></div>
 <p>susshi sets <code>SSH_AUTH_SOCK</code> to the given path and passes <code>-o IdentityAgent=&lt;path&gt;</code> to <code>ssh</code>. Useful for:</p>
 <ul>
@@ -1185,7 +1185,7 @@
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">agent_forwarding</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">  </span><span class="c1"># default</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">groups</span><span class="p">:</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Jump</span><span class="nv"> </span><span class="s">Infrastructure&quot;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Jump</span><span class="nv"> </span><span class="s">Infrastructure"</span>
 <a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">agent_forwarding</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </code></pre></div>
 <p>Inheritable at any config level. Avoid enabling globally — forward only to hosts you trust.</p>
@@ -1193,8 +1193,8 @@
 <p>Reuse SSH connections for the same host. Subsequent connections open nearly instantly without a new handshake.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">defaults</span><span class="p">:</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">control_master</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">control_path</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;~/.ssh/ctl/%h_%p_%r&quot;</span><span class="w">  </span><span class="c1"># default socket location</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">control_persist</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;10m&quot;</span><span class="w">               </span><span class="c1"># keep master alive 10 min after disconnect</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">control_path</span><span class="p">:</span><span class="w"> </span><span class="s">"~/.ssh/ctl/%h_%p_%r"</span><span class="w">  </span><span class="c1"># default socket location</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">control_persist</span><span class="p">:</span><span class="w"> </span><span class="s">"10m"</span><span class="w">               </span><span class="c1"># keep master alive 10 min after disconnect</span>
 </code></pre></div>
 <p>susshi automatically creates the parent directory of the socket path.</p>
 <blockquote>
@@ -1204,13 +1204,13 @@
 <p>Pass arbitrary <code>ssh -o</code> options at any config level:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">defaults</span><span class="p">:</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">ssh_options</span><span class="p">:</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;StrictHostKeyChecking=no&quot;</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;UserKnownHostsFile=/dev/null&quot;</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"StrictHostKeyChecking=no"</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"UserKnownHostsFile=/dev/null"</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="nt">groups</span><span class="p">:</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Trusted</span><span class="nv"> </span><span class="s">LAN&quot;</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">"Trusted</span><span class="nv"> </span><span class="s">LAN"</span>
 <a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nt">ssh_options</span><span class="p">:</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;StrictHostKeyChecking=yes&quot;</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"StrictHostKeyChecking=yes"</span>
 </code></pre></div>
 <p>Options at a lower level <strong>replace</strong> the inherited list entirely. To extend the parent list, repeat the inherited options alongside the new ones.</p>
 <h2 id="system-ssh-config-use_system_ssh_config">System SSH Config (<code>use_system_ssh_config</code>)<a class="headerlink" href="#system-ssh-config-use_system_ssh_config" title="Permanent link">&para;</a></h2>
