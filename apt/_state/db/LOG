@@ -336,3 +336,51 @@
 09:08:00.815341 table@remove removed @51
 09:08:01.092042 db@close closing
 09:08:01.092098 db@close done T·52.65µs
+=============== Sep 21, 2026 (UTC) ===============
+09:24:47.968668 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+09:24:47.968829 version@stat F·[0 1] S·12KiB[0B 12KiB] Sc·[0.00 0.00]
+09:24:47.968849 db@open opening
+09:24:47.968948 journal@recovery F·1
+09:24:47.969153 journal@recovery recovering @67
+09:24:47.971639 memdb@flush created L0@70 N·4 S·1KiB "E72..ain,v109":"xCP..795,v107"
+09:24:47.971733 version@stat F·[1 1] S·14KiB[1KiB 12KiB] Sc·[0.25 0.00]
+09:24:47.973240 db@janitor F·4 G·0
+09:24:47.973255 db@open done T·4.40194ms
+09:24:47.973422 db@close closing
+09:24:47.973463 db@close done T·40.524µs
+=============== Sep 21, 2026 (UTC) ===============
+09:24:47.988853 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+09:24:47.989374 version@stat F·[1 1] S·14KiB[1KiB 12KiB] Sc·[0.25 0.00]
+09:24:47.989394 db@open opening
+09:24:47.989424 journal@recovery F·1
+09:24:47.989667 journal@recovery recovering @71
+09:24:47.990783 version@stat F·[1 1] S·14KiB[1KiB 12KiB] Sc·[0.25 0.00]
+09:24:47.992225 db@janitor F·4 G·0
+09:24:47.992253 db@open done T·2.842159ms
+09:24:48.035870 transaction@flush created L0@75 N·10 S·1KiB "C56..deb,v116":"xFP..c2d,v118"
+09:24:48.035894 version@stat F·[2 1] S·15KiB[2KiB 12KiB] Sc·[0.50 0.00]
+09:24:48.036648 db@close closing
+09:24:48.036704 db@close done T·55.538µs
+=============== Sep 21, 2026 (UTC) ===============
+09:24:48.047158 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+09:24:48.047280 version@stat F·[2 1] S·15KiB[2KiB 12KiB] Sc·[0.50 0.00]
+09:24:48.047294 db@open opening
+09:24:48.047321 journal@recovery F·1
+09:24:48.047529 journal@recovery recovering @73
+09:24:48.048855 memdb@flush created L0@76 N·2 S·656B "Efb..790,v122":"Lfb..790,v121"
+09:24:48.048940 version@stat F·[3 1] S·16KiB[3KiB 12KiB] Sc·[0.75 0.00]
+09:24:48.050307 db@janitor F·6 G·0
+09:24:48.050323 db@open done T·3.024229ms
+09:24:48.050588 db@close closing
+09:24:48.050667 db@close done T·76.856µs
+=============== Sep 21, 2026 (UTC) ===============
+09:24:48.061168 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+09:24:48.061285 version@stat F·[3 1] S·16KiB[3KiB 12KiB] Sc·[0.75 0.00]
+09:24:48.061299 db@open opening
+09:24:48.061337 journal@recovery F·1
+09:24:48.061525 journal@recovery recovering @77
+09:24:48.062859 version@stat F·[3 1] S·16KiB[3KiB 12KiB] Sc·[0.75 0.00]
+09:24:48.064446 db@janitor F·6 G·0
+09:24:48.064472 db@open done T·3.156146ms
+09:24:48.400718 db@close closing
+09:24:48.400781 db@close done T·62.016µs
