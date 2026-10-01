@@ -510,6 +510,8 @@ pub struct App {
 
     /// Si `true`, l'overlay d'aide clavier est affiché.
     pub show_help: bool,
+    /// Première ligne visible de l'overlay d'aide (défilement).
+    pub help_scroll: usize,
 
     /// Serveur épinglé dans le split pane droit (None = pas de split).
     pub pinned_server: Option<Box<ResolvedServer>>,

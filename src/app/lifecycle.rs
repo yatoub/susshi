@@ -86,6 +86,7 @@ impl App {
             wallix_pending_connection: None,
             wallix_pending_auth: None,
             show_help: false,
+            help_scroll: 0,
             pinned_server: None,
             pinned_probe_state: ProbeState::Idle,
             pinned_probe_rx: None,

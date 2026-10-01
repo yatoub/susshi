@@ -869,7 +869,8 @@ fn draw_scp_result(f: &mut Frame, app: &mut App, area: Rect) {
 }
 
 /// Overlay d'aide clavier affiché avec `h`.
-pub(crate) fn draw_help_overlay(f: &mut Frame, area: Rect, theme: &Theme) {
+pub(crate) fn draw_help_overlay(f: &mut Frame, app: &mut App, area: Rect) {
+    let theme = app.theme;
     let entries: &[(&str, String)] = &[
         ("j / ↓", fl!("help-navigate-down")),
         ("k / ↑", fl!("help-navigate-up")),
@@ -898,43 +899,107 @@ pub(crate) fn draw_help_overlay(f: &mut Frame, area: Rect, theme: &Theme) {
         ("o", fl!("help-overview")),
         ("|", fl!("help-pin")),
         ("h", fl!("help-help")),
-        ("g / G", fl!("help-goto-top-bottom")),
-        ("PgUp / PgDn", fl!("help-page")),
     ];
 
-    let col_w: u16 = 70;
-    let col_h: u16 = entries.len() as u16 + 4;
+    let title = format!(" {} ", fl!("help-title"));
+    let max_desc_w = entries
+        .iter()
+        .map(|(_, desc)| display_width(desc))
+        .max()
+        .unwrap_or(0);
+    let col_w = help_popup_width(max_desc_w, display_width(&title), area.width);
+    // Largeur réellement disponible pour la description (terminal étroit → retour à la ligne).
+    let desc_w = (col_w as usize).saturating_sub(HELP_KEY_W + HELP_GAP + 2);
+
+    let lines: Vec<Line> = entries
+        .iter()
+        .flat_map(|(key, desc)| {
+            wrap_words(desc, desc_w)
+                .into_iter()
+                .enumerate()
+                .map(move |(i, part)| {
+                    let key = if i == 0 { key } else { "" };
+                    Line::from(vec![
+                        Span::styled(
+                            format!("{key:>width$}", width = HELP_KEY_W),
+                            Style::default()
+                                .fg(theme.sapphire)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled(" ".repeat(HELP_GAP), Style::default()),
+                        Span::styled(part, Style::default().fg(theme.fg)),
+                    ])
+                })
+        })
+        .collect();
+
+    let col_h: u16 = lines.len() as u16 + 4;
     let popup_area = centered_rect(col_w, col_h, area);
 
     f.render_widget(Clear, popup_area);
 
-    let block = Block::default()
-        .title(format!(" {} ", fl!("help-title")))
+    let mut block = Block::default()
+        .title(title)
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(theme.sapphire))
         .style(Style::default().bg(theme.bg));
 
+    let visible_h = block.inner(popup_area).height as usize;
+    // Borne le défilement ici : seule la couche UI connaît la hauteur visible.
+    app.help_scroll = clamp_scroll(app.help_scroll, lines.len(), visible_h);
+    if lines.len() > visible_h {
+        block = block.title_bottom(format!(" {} ", fl!("help-scroll-hint")));
+    }
+
     let inner = block.inner(popup_area);
     f.render_widget(block, popup_area);
 
-    let lines: Vec<Line> = entries
-        .iter()
-        .map(|(key, desc)| {
-            Line::from(vec![
-                Span::styled(
-                    format!("{key:>15}"),
-                    Style::default()
-                        .fg(theme.sapphire)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled("  ", Style::default()),
-                Span::styled(desc.clone(), Style::default().fg(theme.fg)),
-            ])
-        })
-        .collect();
+    let visible: Vec<Line> = lines.into_iter().skip(app.help_scroll).collect();
+    f.render_widget(Paragraph::new(visible), inner);
+}
 
-    f.render_widget(Paragraph::new(lines), inner);
+/// Borne `scroll` pour que la dernière page reste pleine (0 si tout tient à l'écran).
+fn clamp_scroll(scroll: usize, total: usize, visible: usize) -> usize {
+    scroll.min(total.saturating_sub(visible))
+}
+
+/// Largeur de la colonne des touches dans l'overlay d'aide.
+const HELP_KEY_W: usize = 15;
+/// Espace entre la touche et sa description dans l'overlay d'aide.
+const HELP_GAP: usize = 2;
+
+/// Largeur d'affichage d'une chaîne, en colonnes terminal (et non en octets).
+fn display_width(s: &str) -> usize {
+    Span::raw(s).width()
+}
+
+/// Largeur de la popup d'aide : assez large pour la plus longue description et
+/// pour le titre, sans dépasser le terminal.
+fn help_popup_width(max_desc_w: usize, title_w: usize, area_w: u16) -> u16 {
+    let content_w = HELP_KEY_W + HELP_GAP + max_desc_w + 2;
+    let title_w = title_w + 4;
+    u16::try_from(content_w.max(title_w))
+        .unwrap_or(u16::MAX)
+        .min(area_w)
+}
+
+/// Découpe `text` en lignes d'au plus `max_w` colonnes, en coupant sur les espaces.
+/// Un mot plus large que `max_w` reste entier sur sa propre ligne.
+fn wrap_words(text: &str, max_w: usize) -> Vec<String> {
+    let mut lines: Vec<String> = Vec::new();
+    let mut current = String::new();
+    for word in text.split(' ') {
+        if !current.is_empty() && display_width(&current) + 1 + display_width(word) > max_w {
+            lines.push(std::mem::take(&mut current));
+        }
+        if !current.is_empty() {
+            current.push(' ');
+        }
+        current.push_str(word);
+    }
+    lines.push(current);
+    lines
 }
 
 /// Overlay dashboard overview — probe parallèle des serveurs d'un groupe.
@@ -1116,4 +1181,120 @@ pub(crate) fn draw_wizard_overlay(f: &mut Frame, app: &mut App, area: Rect) {
         Paragraph::new(fl!("wizard-hint")).style(Style::default().fg(app.theme.subtext0)),
         chunks[6],
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn display_width_counts_columns_not_bytes() {
+        assert_eq!(display_width("Latte→Frappe"), 12);
+        assert_eq!(display_width("Désactiver"), 10);
+    }
+
+    #[test]
+    fn wrap_words_keeps_short_text_on_one_line() {
+        assert_eq!(wrap_words("Monter", 20), vec!["Monter".to_string()]);
+    }
+
+    #[test]
+    fn wrap_words_breaks_on_spaces() {
+        assert_eq!(
+            wrap_words("Désactiver la capture souris (sélection texte native)", 30),
+            vec![
+                "Désactiver la capture souris".to_string(),
+                "(sélection texte native)".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn wrap_words_never_drops_an_oversized_word() {
+        assert_eq!(
+            wrap_words("a (Latte→Frappe→Macchiato→Mocha) b", 10),
+            vec![
+                "a".to_string(),
+                "(Latte→Frappe→Macchiato→Mocha)".to_string(),
+                "b".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn help_popup_width_fits_longest_description() {
+        // 59 colonnes de description + touche (15) + séparateur (2) + bordures (2).
+        assert_eq!(help_popup_width(59, 30, 200), 78);
+    }
+
+    #[test]
+    fn help_popup_width_fits_title() {
+        // Titre + 2 bordures + 2 coins.
+        assert_eq!(help_popup_width(10, 50, 200), 54);
+    }
+
+    /// Rend l'overlay d'aide dans un terminal factice et renvoie l'écran ligne par ligne.
+    fn render_help(app: &mut App, w: u16, h: u16) -> Vec<String> {
+        use ratatui::{Terminal, backend::TestBackend};
+
+        let mut terminal = Terminal::new(TestBackend::new(w, h)).unwrap();
+        terminal
+            .draw(|f| draw_help_overlay(f, app, f.area()))
+            .unwrap();
+        let buf = terminal.backend().buffer();
+        (0..h)
+            .map(|y| (0..w).map(|x| buf[(x, y)].symbol()).collect())
+            .collect()
+    }
+
+    fn make_app() -> App {
+        let config = crate::config::Config {
+            defaults: None,
+            includes: vec![],
+            groups: vec![],
+            vars: Default::default(),
+        };
+        App::new(config, vec![], std::path::PathBuf::from("/fake"), vec![]).unwrap()
+    }
+
+    #[test]
+    fn help_overlay_scrolls_to_last_entry_on_short_terminal() {
+        let mut app = make_app();
+        let screen = render_help(&mut app, 80, 24);
+        assert!(screen.iter().any(|l| l.contains("j / ↓")));
+        assert!(!screen.iter().any(|l| l.contains("  |  ")));
+
+        // Un défilement excessif est ramené à la dernière page.
+        app.help_scroll = 1000;
+        let screen = render_help(&mut app, 80, 24);
+        assert_eq!(app.help_scroll, 5);
+        assert!(screen.iter().any(|l| l.contains("  |  ")));
+        assert!(!screen.iter().any(|l| l.contains("j / ↓")));
+    }
+
+    #[test]
+    fn help_overlay_does_not_scroll_when_everything_fits() {
+        let mut app = make_app();
+        app.help_scroll = 5;
+        let screen = render_help(&mut app, 120, 50);
+        assert_eq!(app.help_scroll, 0);
+        assert!(screen.iter().any(|l| l.contains("j / ↓")));
+        assert!(screen.iter().any(|l| l.contains("  |  ")));
+    }
+
+    #[test]
+    fn clamp_scroll_is_zero_when_everything_fits() {
+        assert_eq!(clamp_scroll(5, 10, 20), 0);
+    }
+
+    #[test]
+    fn clamp_scroll_stops_at_last_page() {
+        assert_eq!(clamp_scroll(3, 29, 22), 3);
+        assert_eq!(clamp_scroll(50, 29, 22), 7);
+    }
+
+    #[test]
+    fn help_popup_width_is_clamped_to_terminal() {
+        assert_eq!(help_popup_width(59, 30, 60), 60);
+    }
 }

@@ -217,3 +217,44 @@ fn is_selected_favorite_returns_false_when_no_server() {
     // No expansion → group header selected, not a server.
     assert!(!app.is_selected_favorite());
 }
+
+// ── help overlay scroll ──────────────────────────────────────────────────────
+
+#[test]
+fn toggle_help_opens_and_closes() {
+    let mut app = tests_helpers::make_test_app(make_simple_config());
+    app.toggle_help();
+    assert!(app.show_help);
+    app.toggle_help();
+    assert!(!app.show_help);
+}
+
+#[test]
+fn help_scroll_down_and_up() {
+    let mut app = tests_helpers::make_test_app(make_simple_config());
+    app.toggle_help();
+    app.help_scroll_down();
+    app.help_scroll_down();
+    assert_eq!(app.help_scroll, 2);
+    app.help_scroll_up();
+    assert_eq!(app.help_scroll, 1);
+}
+
+#[test]
+fn help_scroll_up_saturates_at_zero() {
+    let mut app = tests_helpers::make_test_app(make_simple_config());
+    app.toggle_help();
+    app.help_scroll_up();
+    assert_eq!(app.help_scroll, 0);
+}
+
+#[test]
+fn reopening_help_resets_scroll() {
+    let mut app = tests_helpers::make_test_app(make_simple_config());
+    app.toggle_help();
+    app.help_scroll_down();
+    app.close_help();
+    assert!(!app.show_help);
+    app.toggle_help();
+    assert_eq!(app.help_scroll, 0);
+}

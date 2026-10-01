@@ -218,6 +218,7 @@ probe-cm-inactive = inactive
 
 # ── Help keyboard overlay ─────────────────────────────────────────────────────
 help-title = Keyboard shortcuts  (h / Esc to close)
+help-scroll-hint = j/k or ↑/↓ to scroll
 help-navigate-down = Move down
 help-navigate-up = Move up
 help-connect = Connect
@@ -245,8 +246,6 @@ help-probe = SSH diagnostic (probe)
 help-overview = Overview dashboard for selected group
 help-pin = Pin / unpin server (split pane)
 help-help = Show / hide this help
-help-goto-top-bottom = Go to top / bottom of list
-help-page = Previous / next page
 
 # ── First-run wizard ──────────────────────────────────────────────────────────
 wizard-title = 👋 Welcome — let's add your first server

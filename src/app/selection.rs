@@ -1,6 +1,28 @@
 use super::*;
 
 impl App {
+    /// Affiche ou masque l'overlay d'aide, en repartant du haut à l'ouverture.
+    pub fn toggle_help(&mut self) {
+        self.show_help = !self.show_help;
+        self.help_scroll = 0;
+    }
+
+    /// Ferme l'overlay d'aide.
+    pub fn close_help(&mut self) {
+        self.show_help = false;
+        self.help_scroll = 0;
+    }
+
+    /// Fait défiler l'aide vers le bas (borné à l'affichage par la couche UI).
+    pub fn help_scroll_down(&mut self) {
+        self.help_scroll = self.help_scroll.saturating_add(1);
+    }
+
+    /// Fait défiler l'aide vers le haut.
+    pub fn help_scroll_up(&mut self) {
+        self.help_scroll = self.help_scroll.saturating_sub(1);
+    }
+
     pub fn next(&mut self) {
         let count = self.get_visible_items().len();
         if count > 0 {

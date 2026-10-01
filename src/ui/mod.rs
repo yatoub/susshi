@@ -91,7 +91,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     // Overlay aide clavier — rendu juste avant les erreurs
     if app.show_help {
-        overlays::draw_help_overlay(f, f.area(), app.theme);
+        overlays::draw_help_overlay(f, app, f.area());
     }
 
     // Overlay erreur — rendu en dernier pour être au-dessus de tout
