@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.23.1] — 2026-10-01
+
+### Fixed
+
+- Stop truncating help overlay text and make it scrollable ([#215](https://github.com/yatoub/susshi/pull/215))
+
+
 ## [0.23.0] — 2026-09-21
 
 ### Added
