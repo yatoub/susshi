@@ -1,6 +1,28 @@
 Package: susshi
 Priority: optional
 Section: net
+Installed-Size: 4773
+Maintainer: yatoub <yatoub@users.noreply.github.com>
+Architecture: amd64
+Version: 0.23.1-1
+Depends: openssh-client
+Recommends: xclip | xdotool
+Filename: pool/main/s/susshi/susshi_0.23.1-1_amd64.deb
+Size: 2050420
+MD5sum: 7b1f146651d16aa98feced56279d4966
+SHA1: d182a17a077ca43ecda84364405a3170f7f5b9ca
+SHA256: cd50c5637b5ece0c59d200cb2e7513f43d5781420fbae1238d5f0600f2ee6894
+SHA512: 892632f9c9f39b05ff4df48b457463b4106eec39589f5b4e61439b9585bf831d4d1fbf7b6c13e1a2b59a53ea57270071d07f6e9c785ebd406c069f5c571e68ef
+Description: Terminal SSH manager with YAML inventories, multi-hop jump hosts, Wallix
+ bastion, tunnels, SCP, and Catppuccin TUI
+ susshi is a modern, terminal-based SSH connection manager with TUI (ratatui +
+ Catppuccin theme), multi-mode connections (direct, jump, bastion/Wallix), and
+ YAML configuration.
+Homepage: https://yatoub.github.io/susshi/
+
+Package: susshi
+Priority: optional
+Section: net
 Installed-Size: 4770
 Maintainer: yatoub <yatoub@users.noreply.github.com>
 Architecture: amd64
