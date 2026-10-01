@@ -218,6 +218,7 @@ probe-cm-inactive = inactif
 
 # ── Overlay aide clavier ──────────────────────────────────────────────────────
 help-title = Aide — raccourcis clavier  (h / Esc pour fermer)
+help-scroll-hint = j/k ou ↑/↓ pour défiler
 help-navigate-down = Descendre
 help-navigate-up = Monter
 help-connect = Connecter
@@ -245,8 +246,6 @@ help-probe = Diagnostic SSH (probe)
 help-overview = Dashboard overview du groupe sélectionné
 help-pin = Épingler / dés-épingler le serveur (split pane)
 help-help = Afficher / masquer cette aide
-help-goto-top-bottom = Aller en haut / bas de la liste
-help-page = Page précédente / suivante
 
 # ── Wizard de première configuration ────────────────────────────────────────
 wizard-title = 👋 Bienvenue — ajoutons votre premier serveur

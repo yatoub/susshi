@@ -1138,14 +1138,18 @@ fn run_app(
                                 return Ok(AppResult::Exit);
                             }
                             KeyCode::Down | KeyCode::Char('j') => {
-                                if app.overview.is_some() {
+                                if app.show_help {
+                                    app.help_scroll_down();
+                                } else if app.overview.is_some() {
                                     app.overview_scroll_down();
                                 } else {
                                     app.next();
                                 }
                             }
                             KeyCode::Up | KeyCode::Char('k') => {
-                                if app.overview.is_some() {
+                                if app.show_help {
+                                    app.help_scroll_up();
+                                } else if app.overview.is_some() {
                                     app.overview_scroll_up();
                                 } else {
                                     app.previous();
@@ -1214,7 +1218,7 @@ fn run_app(
                                 app.is_searching = true;
                             }
                             KeyCode::Char('h') => {
-                                app.show_help = !app.show_help;
+                                app.toggle_help();
                             }
                             KeyCode::Char('M') => {
                                 app.mouse_capture = !app.mouse_capture;
@@ -1225,7 +1229,7 @@ fn run_app(
                                 }
                             }
                             KeyCode::Esc if app.show_help => {
-                                app.show_help = false;
+                                app.close_help();
                             }
                             KeyCode::Char('o') => {
                                 if app.overview.is_some() {
