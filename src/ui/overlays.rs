@@ -830,8 +830,15 @@ fn draw_scp_result(f: &mut Frame, app: &mut App, area: Rect) {
         _ => return,
     };
 
-    let popup_h: u16 = 5;
-    let popup_w: u16 = (msg.len() as u16 + 8).clamp(36, area.width.saturating_sub(4));
+    // Le message (ex. sortie d'erreur de scp) peut dépasser la largeur :
+    // il est replié sur plusieurs lignes et la popup s'agrandit en conséquence.
+    let msg_w = msg.chars().count() as u16 + 4;
+    let popup_w: u16 = (msg_w + 4).clamp(36, area.width.saturating_sub(4).max(36));
+    let text_w = popup_w.saturating_sub(2).max(1);
+    let msg_h = msg_w
+        .div_ceil(text_w)
+        .clamp(1, area.height.saturating_sub(6).max(1));
+    let popup_h: u16 = msg_h + 4;
     let popup_area = centered_rect(popup_w, popup_h, area);
 
     f.render_widget(Clear, popup_area);
@@ -849,7 +856,7 @@ fn draw_scp_result(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1),
+            Constraint::Length(msg_h),
             Constraint::Length(1),
             Constraint::Length(1),
         ])
@@ -859,7 +866,8 @@ fn draw_scp_result(f: &mut Frame, app: &mut App, area: Rect) {
         Paragraph::new(Line::from(vec![
             Span::styled(format!("  {} ", icon), Style::default().fg(color)),
             Span::styled(msg, Style::default().fg(app.theme.fg)),
-        ])),
+        ]))
+        .wrap(Wrap { trim: false }),
         chunks[0],
     );
     f.render_widget(

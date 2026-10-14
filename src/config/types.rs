@@ -249,6 +249,9 @@ pub struct BastionConfig {
     /// Nom exact de l'autorisation Wallix (ex: "STI-ANSCORE_ces3s-admins").
     /// Quand défini, inclus dans le login filtré pour forcer la sélection côté Wallix.
     pub authorization: Option<String>,
+    /// Autorisations Wallix candidates, par ordre de préférence. `{group}` est
+    /// remplacé par `group` (suffixe). Prioritaires sur la détection (menu).
+    pub authorizations: Option<Vec<String>>,
     /// Tokens de détection d'en-tête dans le menu Wallix (défaut : ["ID", "Cible", "Autorisation"]).
     /// Remplacez si votre bastion affiche des colonnes dans une autre langue.
     pub header_columns: Option<Vec<String>>,
@@ -381,6 +384,9 @@ pub struct ResolvedServer {
     pub wallix_direct: bool,
     /// Nom exact de l'autorisation Wallix — inclus dans le login filtré quand défini.
     pub wallix_authorization: Option<String>,
+    /// Autorisations Wallix déclarées en config (`{group}` déjà remplacé),
+    /// par ordre de préférence.
+    pub wallix_authorizations: Vec<String>,
     /// Tokens de détection d'en-tête du menu Wallix (vide = defaults : "ID", "Cible", "Autorisation").
     pub wallix_header_columns: Vec<String>,
     /// Respecte `~/.ssh/config` si `true` (ne passe pas `-F /dev/null`).

@@ -182,10 +182,10 @@ tunnel-badge-none =
     }
 
 # ── SCP ───────────────────────────────────────────────────────────────────────
-scp-wallix-unavailable = SCP non disponible en mode Wallix
 scp-done-ok = SCP terminé ✔
 scp-done-err = SCP terminé avec des erreurs ✗
 scp-failed = SCP échoué : { $error }
+scp-thread-ended = le transfert s'est interrompu sans résultat
 scp-form-local-required = Le chemin local est obligatoire
 scp-form-remote-required = Le chemin distant est obligatoire
 scp-direction-title = Transfert SCP — { $server }

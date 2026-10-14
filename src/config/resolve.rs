@@ -520,6 +520,7 @@ pub(crate) fn merge_bastion(
             selection_timeout_secs: c.selection_timeout_secs.or(p.selection_timeout_secs),
             direct: c.direct.or(p.direct),
             authorization: c.authorization.clone().or(p.authorization.clone()),
+            authorizations: c.authorizations.clone().or(p.authorizations.clone()),
             header_columns: c.header_columns.clone().or(p.header_columns.clone()),
         }),
     }
@@ -692,6 +693,23 @@ fn resolve_server(
         .filter(|g| !g.is_empty())
         .map(ToOwned::to_owned);
 
+    // `{group}` → suffixe résolu ; sans suffixe, l'entrée est inutilisable.
+    let resolved_wallix_authorizations: Vec<String> = final_bastion
+        .as_ref()
+        .and_then(|b| b.authorizations.as_ref())
+        .map(|list| {
+            list.iter()
+                .map(|a| a.trim())
+                .filter(|a| !a.is_empty())
+                .filter_map(|a| match (&resolved_wallix_group, a.contains("{group}")) {
+                    (_, false) => Some(a.to_string()),
+                    (Some(g), true) => Some(a.replace("{group}", g)),
+                    (None, true) => None,
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
     Ok(ResolvedServer {
         namespace: namespace.to_string(),
         group_name: group.to_string(),
@@ -764,6 +782,7 @@ fn resolve_server(
             .and_then(|b| b.direct)
             .unwrap_or(false),
         wallix_authorization: final_bastion.as_ref().and_then(|b| b.authorization.clone()),
+        wallix_authorizations: resolved_wallix_authorizations,
         wallix_header_columns: final_bastion
             .as_ref()
             .and_then(|b| b.header_columns.clone())

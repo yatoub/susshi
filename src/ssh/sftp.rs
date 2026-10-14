@@ -26,7 +26,16 @@
 //! |----------|---------|
 //! | Direct   | ✔ session SSH2 directe |
 //! | Jump     | ✔ `ssh -W` comme `scp -J` — un seul chiffrement |
-//! | Wallix   | ✖ retourne une erreur |
+//! | Wallix   | ✔ binaire `scp` système (voir ci-dessous) |
+//!
+//! En mode Wallix, le transfert délègue au binaire `scp` d'OpenSSH avec le
+//! login `user@cible+SSH+autorisation+bastion_user@bastion` (aucun menu
+//! possible : autorisations de la config essayées dans l'ordre, détection en
+//! dernier recours) et le transfert
+//! d'agent (`-A`) :
+//! le bastion s'authentifie sur la cible via l'agent transféré, ce que
+//! libssh2 ne sait pas faire. La progression n'est connue qu'en fin de
+//! transfert.
 
 use crate::config::{ConnectionMode, ResolvedServer};
 use anyhow::Result;
@@ -78,8 +87,6 @@ pub enum ScpEvent {
 /// Contrairement à `spawn_scp`, aucun PID n'est retourné (pas de sous-processus).
 /// Le thread SFTP peut être abandonné en droppant le `Receiver` — il détectera
 /// `SendError` et se terminera proprement.
-///
-/// **Mode Wallix non supporté** — retourne une erreur immédiatement.
 #[cfg(unix)]
 pub fn spawn_sftp(
     server: &ResolvedServer,
@@ -88,10 +95,6 @@ pub fn spawn_sftp(
     local: &str,
     remote: &str,
 ) -> Result<mpsc::Receiver<ScpEvent>> {
-    if mode == ConnectionMode::Wallix {
-        anyhow::bail!("SFTP non disponible en mode Wallix");
-    }
-
     let server = server.clone();
     let local = shellexpand::tilde(local).into_owned();
     let remote = remote.to_string();
@@ -99,13 +102,17 @@ pub fn spawn_sftp(
     let (tx, rx) = mpsc::channel::<ScpEvent>();
 
     std::thread::spawn(move || {
-        let result = transfer_inner(&server, mode, &direction, &local, &remote, &tx);
+        let result = if mode == ConnectionMode::Wallix {
+            transfer_wallix_scp(&server, &direction, &local, &remote, &tx)
+        } else {
+            transfer_inner(&server, mode, &direction, &local, &remote, &tx)
+        };
         match result {
             Ok(()) => {
                 let _ = tx.send(ScpEvent::Done(true));
             }
             Err(e) => {
-                let _ = tx.send(ScpEvent::Error(e.to_string()));
+                let _ = tx.send(ScpEvent::Error(format!("{e:#}")));
             }
         }
     });
@@ -136,6 +143,7 @@ fn transfer_inner(
     remote: &str,
     tx: &mpsc::Sender<ScpEvent>,
 ) -> Result<()> {
+    use anyhow::Context;
     use std::fs::File;
     use std::path::{Path, PathBuf};
 
@@ -149,7 +157,9 @@ fn transfer_inner(
     // request/ACK par paquet) pour éviter la limitation MAX_SFTP_OUTGOING_SIZE
     // de libssh2 (30 KB), qui plafonne le débit à ~1–3 MB/s sur liens à latence.
     let remote_path: PathBuf = {
-        let sftp = sess.sftp()?;
+        let sftp = sess
+            .sftp()
+            .map_err(|e| anyhow::anyhow!("ouverture du canal SFTP : {e}"))?;
         let raw = resolve_remote_path(&sftp, remote);
 
         if remote.ends_with('/') || remote.ends_with('\\') || raw.as_os_str().is_empty() {
@@ -178,8 +188,22 @@ fn transfer_inner(
             let file_size = std::fs::metadata(local_path).map(|m| m.len()).unwrap_or(0);
             let _ = tx.send(ScpEvent::FileSize(file_size));
             let mut src = File::open(local_path)?;
-            let mut channel = sess.scp_send(&remote_path, 0o644, file_size, None)?;
+            let mut channel = sess
+                .scp_send(&remote_path, 0o644, file_size, None)
+                .map_err(|e| {
+                    anyhow::anyhow!("ouverture SCP (upload) {}: {e}", remote_path.display())
+                })?;
             copy_with_progress(&mut src, &mut channel, file_size, tx)?;
+            // Fin de fichier SCP : libssh2 n'envoie pas l'octet nul final ni ne
+            // lit l'acquittement. OpenSSH le tolère, mais un proxy (Wallix)
+            // abandonne le fichier sans cet octet — et l'erreur serait muette.
+            {
+                use std::io::Write as _;
+                channel.write_all(&[0])?;
+                channel.flush()?;
+            }
+            read_scp_ack(&mut channel)
+                .with_context(|| format!("écriture distante de {}", remote_path.display()))?;
             // Fermeture propre du canal SCP (envoi du signal EOF au serveur).
             channel.send_eof()?;
             channel.wait_eof()?;
@@ -199,7 +223,9 @@ fn transfer_inner(
                 }
             };
             // scp_recv fournit directement la taille du fichier dans le header SCP.
-            let (mut channel, scp_stat) = sess.scp_recv(&remote_path)?;
+            let (mut channel, scp_stat) = sess.scp_recv(&remote_path).map_err(|e| {
+                anyhow::anyhow!("ouverture SCP (download) {}: {e}", remote_path.display())
+            })?;
             let file_size = scp_stat.size();
             let _ = tx.send(ScpEvent::FileSize(file_size));
             let mut dst = File::create(&local_path)?;
@@ -233,8 +259,206 @@ fn open_session(server: &ResolvedServer, mode: ConnectionMode) -> Result<ssh2::S
                 .ok_or_else(|| anyhow::anyhow!("Jump host non configuré pour ce serveur"))?;
             open_session_via_jump(jump_str, server)
         }
-        ConnectionMode::Wallix => anyhow::bail!("SFTP non disponible en mode Wallix"),
+        // Le mode Wallix passe par `transfer_wallix_scp` (binaire `scp`).
+        ConnectionMode::Wallix => anyhow::bail!("session libssh2 non utilisée en mode Wallix"),
     }
+}
+
+/// Autorisations à essayer, dans l'ordre, pour un transfert SCP via Wallix
+/// (aucun menu possible).
+///
+/// 1. Autorisations déclarées en config (`authorization`, puis `authorizations`).
+/// 2. Dernier recours : détection — nom dérivé `<ENV>-<GROUPE>_<group>` (le
+///    candidat le plus qualifié), ou `None` (login sans autorisation).
+#[cfg(unix)]
+fn wallix_scp_candidates(server: &ResolvedServer) -> Vec<Option<String>> {
+    let configured = crate::wallix::configured_authorizations(server);
+    if !configured.is_empty() {
+        return configured.into_iter().map(Some).collect();
+    }
+    let detected = crate::wallix::build_expected_groups(server)
+        .ok()
+        .and_then(|groups| groups.into_iter().last());
+    vec![detected]
+}
+
+/// Wallix refuse la cible/autorisation demandée (« Cible invalide »).
+#[cfg(unix)]
+fn is_wallix_invalid_target(stderr: &str) -> bool {
+    let lower = stderr.to_lowercase();
+    lower.contains("cible invalide") || lower.contains("invalid target")
+}
+
+/// Construit les arguments du binaire `scp` pour un transfert via Wallix.
+///
+/// Format du login : `user@cible+SSH+autorisation+bastion_user@bastion:chemin`, avec `-A` pour
+/// que le bastion puisse s'authentifier sur la cible via l'agent transféré.
+/// `BatchMode=yes` : aucun prompt possible (pas de TTY), échec immédiat.
+#[cfg(unix)]
+fn build_wallix_scp_args(
+    server: &ResolvedServer,
+    direction: &ScpDirection,
+    local: &str,
+    remote: &str,
+    authorization: Option<&str>,
+) -> Result<Vec<String>> {
+    let bastion = server
+        .bastion_host
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| anyhow::anyhow!("Wallix host not configured for this server"))?;
+    let (bastion_host, bastion_port) = match bastion.split_once(':') {
+        Some((h, p)) => (h, Some(p)),
+        None => (bastion, None),
+    };
+    let mut args: Vec<String> = Vec::new();
+    if !server.use_system_ssh_config {
+        args.extend(["-F".into(), "/dev/null".into()]);
+    }
+    args.push("-A".into());
+    for key in [&server.ssh_key, &server.ssh_cert] {
+        if !key.is_empty() {
+            args.push("-i".into());
+            args.push(shellexpand::tilde(key).into_owned());
+        }
+    }
+    for opt in &server.ssh_options {
+        if opt.starts_with('-') {
+            args.push(opt.clone());
+        } else {
+            args.extend(["-o".into(), opt.clone()]);
+        }
+    }
+    if !server.use_system_ssh_config
+        && !server
+            .ssh_options
+            .iter()
+            .any(|o| o.to_ascii_lowercase().contains("stricthostkeychecking"))
+    {
+        args.extend(["-o".into(), "StrictHostKeyChecking=accept-new".into()]);
+    }
+    if !server.ssh_agent_sock.is_empty() {
+        let sock = shellexpand::tilde(&server.ssh_agent_sock).into_owned();
+        args.extend(["-o".into(), format!("IdentityAgent={sock}")]);
+    }
+    // BatchMode : aucun prompt possible (pas de TTY). LogLevel=ERROR : masque
+    // les avertissements (known_hosts, post-quantique) qui noient l'erreur.
+    args.extend(["-o".into(), "BatchMode=yes".into()]);
+    args.extend(["-o".into(), "LogLevel=ERROR".into()]);
+    if let Some(p) = bastion_port {
+        args.extend(["-P".into(), p.to_string()]);
+    }
+
+    // Login Wallix direct : user@cible+PROTOCOLE[+autorisation]+bastion_user.
+    let login = crate::wallix::build_direct_login(server, authorization);
+    let endpoint = format!("{login}@{bastion_host}:{remote}");
+    match direction {
+        ScpDirection::Upload => args.extend([local.to_string(), endpoint]),
+        ScpDirection::Download => args.extend([endpoint, local.to_string()]),
+    }
+    Ok(args)
+}
+
+/// Résume la sortie d'erreur de `scp` sur une ligne, sans les avertissements
+/// d'OpenSSH (known_hosts, post-quantique). Si tout est filtré, renvoie la
+/// sortie brute pour ne rien perdre.
+#[cfg(unix)]
+fn scp_stderr_summary(stderr: &str) -> String {
+    let all: Vec<&str> = stderr
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect();
+    let useful: Vec<&str> = all
+        .iter()
+        .copied()
+        .filter(|l| !l.starts_with("Warning: Permanently added") && !l.starts_with("**"))
+        .collect();
+    if useful.is_empty() {
+        all.join(" | ")
+    } else {
+        useful.join(" | ")
+    }
+}
+
+/// Transfert via Wallix en déléguant au binaire `scp` système.
+///
+/// Le processus est tué si le `Receiver` est droppé (transfert annulé côté TUI).
+#[cfg(unix)]
+fn transfer_wallix_scp(
+    server: &ResolvedServer,
+    direction: &ScpDirection,
+    local: &str,
+    remote: &str,
+    tx: &mpsc::Sender<ScpEvent>,
+) -> Result<()> {
+    use std::io::Read as _;
+    use std::process::{Command, Stdio};
+
+    if *direction == ScpDirection::Upload {
+        let size = std::fs::metadata(local).map(|m| m.len()).unwrap_or(0);
+        let _ = tx.send(ScpEvent::FileSize(size));
+    }
+
+    // Chaque autorisation candidate est essayée tant que Wallix répond
+    // « Cible invalide » ; toute autre erreur est remontée immédiatement.
+    let candidates = wallix_scp_candidates(server);
+    let mut refused: Vec<String> = Vec::new();
+    for authorization in &candidates {
+        let args =
+            build_wallix_scp_args(server, direction, local, remote, authorization.as_deref())?;
+        let n = args.len();
+        let endpoint = match direction {
+            ScpDirection::Upload => args[n - 1].clone(),
+            ScpDirection::Download => args[n - 2].clone(),
+        };
+
+        let mut child = Command::new("scp")
+            .args(&args)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|e| anyhow::anyhow!("lancement de scp : {e}"))?;
+
+        let status = loop {
+            if let Some(status) = child.try_wait()? {
+                break status;
+            }
+            // Sonde d'annulation : échoue si la TUI a abandonné le transfert.
+            if tx.send(ScpEvent::Progress(0)).is_err() {
+                let _ = child.kill();
+                let _ = child.wait();
+                anyhow::bail!("transfert annulé");
+            }
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        };
+
+        if status.success() {
+            let _ = tx.send(ScpEvent::Progress(100));
+            return Ok(());
+        }
+
+        let mut stderr = String::new();
+        if let Some(mut err) = child.stderr.take() {
+            let _ = err.read_to_string(&mut stderr);
+        }
+        if is_wallix_invalid_target(&stderr) {
+            refused.push(endpoint);
+            continue;
+        }
+        // La destination est affichée pour comparer avec un `scp` manuel.
+        anyhow::bail!(
+            "scp a échoué ({status}) : {} [cible : {endpoint}]",
+            scp_stderr_summary(&stderr)
+        );
+    }
+
+    anyhow::bail!(
+        "Wallix : cible invalide pour toutes les autorisations essayées [{}] — \
+         déclarez la bonne dans wallix.authorizations",
+        refused.join(", ")
+    )
 }
 
 /// Extrait `(host, port)` depuis `server.host` (qui peut contenir `"host:port"`).
@@ -511,6 +735,27 @@ fn resolve_remote_path(sftp: &ssh2::Sftp, remote: &str) -> std::path::PathBuf {
     }
 }
 
+/// Lit l'acquittement SCP du serveur : `0` = OK, `1`/`2` suivi d'un message
+/// terminé par `\n` = erreur (non fatale / fatale).
+#[cfg(unix)]
+fn read_scp_ack(r: &mut dyn std::io::Read) -> Result<()> {
+    let mut code = [0u8; 1];
+    r.read_exact(&mut code)
+        .map_err(|e| anyhow::anyhow!("acquittement SCP manquant : {e}"))?;
+    if code[0] == 0 {
+        return Ok(());
+    }
+    let mut msg = Vec::new();
+    let mut byte = [0u8; 1];
+    while r.read(&mut byte)? == 1 && byte[0] != b'\n' {
+        msg.push(byte[0]);
+    }
+    anyhow::bail!(
+        "SCP refusé par le serveur : {}",
+        String::from_utf8_lossy(&msg).trim()
+    )
+}
+
 /// Copie `src` vers `dst` par chunks de 64 KiB en émettant [`ScpEvent::Progress`].
 ///
 /// N'émet un événement que si le pourcentage change (évite de saturer le channel).
@@ -562,21 +807,255 @@ mod tests {
     use super::*;
     use crate::config::ConnectionMode;
 
-    /// Vérifie que `spawn_sftp` retourne immédiatement une erreur en mode Wallix
-    /// sans lancer de thread ni de connexion réseau.
     #[test]
     #[cfg(unix)]
-    fn wallix_returns_error_immediately() {
-        let server = base_server();
-        let result = spawn_sftp(
+    fn scp_ack_zero_is_ok() {
+        let mut r = std::io::Cursor::new(vec![0u8]);
+        assert!(read_scp_ack(&mut r).is_ok());
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn scp_ack_error_reports_message() {
+        let mut r = std::io::Cursor::new(b"\x01scp: /x/a.txt: Permission denied\n".to_vec());
+        let err = read_scp_ack(&mut r).unwrap_err().to_string();
+        assert!(err.contains("Permission denied"), "{err}");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn scp_ack_fatal_reports_message() {
+        let mut r = std::io::Cursor::new(b"\x02fatal\n".to_vec());
+        assert!(
+            read_scp_ack(&mut r)
+                .unwrap_err()
+                .to_string()
+                .contains("fatal")
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn scp_ack_eof_is_error() {
+        let mut r = std::io::Cursor::new(Vec::new());
+        assert!(read_scp_ack(&mut r).is_err());
+    }
+
+    /// Les avertissements d'OpenSSH (known_hosts, post-quantique) sont retirés
+    /// pour ne garder que la cause réelle de l'échec.
+    #[test]
+    #[cfg(unix)]
+    fn scp_stderr_summary_drops_openssh_noise() {
+        let stderr = "Warning: Permanently added 'b.example' (ECDSA) to the list of known hosts.\r\n\
+** WARNING: connection is not using a post-quantum key exchange algorithm.\n\
+** This session may be vulnerable to \"store now, decrypt later\" attacks.\n\
+** The server may need to be upgraded. See https://openssh.com/pq.html\n\
+jdoe@srv+jdoe@b.example: Permission denied (publickey,keyboard-interactive).\n\
+scp: Connection closed\n";
+        assert_eq!(
+            scp_stderr_summary(stderr),
+            "jdoe@srv+jdoe@b.example: Permission denied (publickey,keyboard-interactive). | scp: Connection closed"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn scp_stderr_summary_keeps_raw_when_only_noise() {
+        assert_eq!(scp_stderr_summary("** WARNING: x\n"), "** WARNING: x");
+    }
+
+    /// Serveur Wallix type : groupe YAML `Colibris`, env `PR`, groupe Wallix
+    /// `ces3s-admins`.
+    fn wallix_server() -> ResolvedServer {
+        let mut server = base_server();
+        server.host = "srv01.example.fr".into();
+        server.user = "jdoe".into();
+        server.group_name = "Colibris".into();
+        server.env_name = "PR".into();
+        server.wallix_group = Some("ces3s-admins".into());
+        server.bastion_host = Some("ssh.bastion.example.fr".into());
+        server.bastion_user = Some("jdoe".into());
+        server
+    }
+
+    fn endpoint(args: &[String], direction: &ScpDirection) -> String {
+        let n = args.len();
+        match direction {
+            ScpDirection::Upload => args[n - 1].clone(),
+            ScpDirection::Download => args[n - 2].clone(),
+        }
+    }
+
+    // ── Candidats d'autorisation : config d'abord, détection en dernier ──────
+
+    #[test]
+    #[cfg(unix)]
+    fn wallix_scp_candidates_configured_in_order() {
+        let mut server = wallix_server();
+        server.wallix_authorizations = vec!["PR-A_ces3s-admins".into(), "PR-B_ces3s-admins".into()];
+        assert_eq!(
+            wallix_scp_candidates(&server),
+            vec![
+                Some("PR-A_ces3s-admins".to_string()),
+                Some("PR-B_ces3s-admins".to_string())
+            ]
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn wallix_scp_candidates_explicit_authorization_first() {
+        let mut server = wallix_server();
+        server.wallix_authorizations = vec!["PR-A_ces3s-admins".into()];
+        server.wallix_authorization = Some("STI-ANSCORE_ces3s-admins".into());
+        assert_eq!(
+            wallix_scp_candidates(&server)[0].as_deref(),
+            Some("STI-ANSCORE_ces3s-admins")
+        );
+    }
+
+    /// Dernier recours : nom dérivé `<ENV>-<GROUPE>_<group>`.
+    #[test]
+    #[cfg(unix)]
+    fn wallix_scp_candidates_fall_back_to_detection() {
+        assert_eq!(
+            wallix_scp_candidates(&wallix_server()),
+            vec![Some("PR-COLIBRIS_ces3s-admins".to_string())]
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn wallix_scp_candidates_without_anything() {
+        let mut server = wallix_server();
+        server.wallix_group = None;
+        assert_eq!(wallix_scp_candidates(&server), vec![None]);
+    }
+
+    /// « Cible invalide » (FR) / « Invalid target » (EN) → candidat suivant.
+    #[test]
+    #[cfg(unix)]
+    fn wallix_invalid_target_detection() {
+        assert!(is_wallix_invalid_target(
+            "\nCible invalide\n\nscp: Connection closed"
+        ));
+        assert!(is_wallix_invalid_target("Invalid target"));
+        assert!(!is_wallix_invalid_target("Permission denied (publickey)"));
+    }
+
+    // ── Arguments scp ─────────────────────────────────────────────────────────
+
+    /// Format validé sur le bastion :
+    /// `user@cible+SSH+autorisation+bastion_user@bastion:chemin`.
+    #[test]
+    #[cfg(unix)]
+    fn wallix_scp_args_upload() {
+        let args = build_wallix_scp_args(
+            &wallix_server(),
+            &ScpDirection::Upload,
+            "/tmp/a.txt",
+            "/data/",
+            Some("PR-COLIBRIS_ces3s-admins"),
+        )
+        .expect("args");
+        assert!(args.contains(&"-A".to_string()), "{args:?}");
+        assert!(args.contains(&"BatchMode=yes".to_string()), "{args:?}");
+        assert!(args.contains(&"LogLevel=ERROR".to_string()), "{args:?}");
+        let n = args.len();
+        assert_eq!(args[n - 2], "/tmp/a.txt");
+        assert_eq!(
+            args[n - 1],
+            "jdoe@srv01.example.fr+SSH+PR-COLIBRIS_ces3s-admins+jdoe@ssh.bastion.example.fr:/data/"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn wallix_scp_args_download() {
+        let args = build_wallix_scp_args(
+            &wallix_server(),
+            &ScpDirection::Download,
+            "/tmp/",
+            "~/f.log",
+            Some("PR-X_y"),
+        )
+        .expect("args");
+        let n = args.len();
+        assert_eq!(
+            args[n - 2],
+            "jdoe@srv01.example.fr+SSH+PR-X_y+jdoe@ssh.bastion.example.fr:~/f.log"
+        );
+        assert_eq!(args[n - 1], "/tmp/");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn wallix_scp_args_without_authorization() {
+        let args = build_wallix_scp_args(&wallix_server(), &ScpDirection::Upload, "/a", "/b", None)
+            .expect("args");
+        assert_eq!(
+            endpoint(&args, &ScpDirection::Upload),
+            "jdoe@srv01.example.fr+SSH+jdoe@ssh.bastion.example.fr:/b"
+        );
+    }
+
+    /// Port du bastion via `-P`, port éventuel de la cible retiré du login.
+    #[test]
+    #[cfg(unix)]
+    fn wallix_scp_args_ports_and_key() {
+        let mut server = wallix_server();
+        server.host = "srv01.example.fr:2222".into();
+        server.bastion_host = Some("ssh.bastion.example.fr:2200".into());
+        server.ssh_key = "/k/id".into();
+        let args = build_wallix_scp_args(&server, &ScpDirection::Upload, "/tmp/a", "/d/", None)
+            .expect("args");
+        let joined = args.join(" ");
+        assert!(joined.contains("-P 2200"), "{joined}");
+        assert!(joined.contains("-i /k/id"), "{joined}");
+        assert!(
+            endpoint(&args, &ScpDirection::Upload).starts_with("jdoe@srv01.example.fr+SSH+"),
+            "{args:?}"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn wallix_scp_args_without_bastion_host_errors() {
+        let mut server = wallix_server();
+        server.bastion_host = None;
+        assert!(build_wallix_scp_args(&server, &ScpDirection::Upload, "/a", "/b", None).is_err());
+    }
+
+    /// En mode Wallix, `spawn_sftp` lance le transfert ; un bastion injoignable
+    /// remonte une erreur via le channel.
+    #[test]
+    #[cfg(unix)]
+    fn wallix_unreachable_bastion_emits_error_event() {
+        let mut server = base_server();
+        server.bastion_host = Some("127.0.0.1:1".into());
+        server.bastion_user = Some("jdoe".into());
+
+        let rx = spawn_sftp(
             &server,
             ConnectionMode::Wallix,
             ScpDirection::Upload,
             "/tmp/file",
             "/remote/file",
+        )
+        .expect("spawn_sftp ne doit pas échouer immédiatement en mode Wallix");
+
+        // Ignore FileSize / Progress : seul l'évènement terminal compte.
+        let event = loop {
+            match rx.recv_timeout(std::time::Duration::from_secs(10)) {
+                Ok(ScpEvent::FileSize(_) | ScpEvent::Progress(_)) => continue,
+                other => break other,
+            }
+        };
+        assert!(
+            matches!(event, Ok(ScpEvent::Error(_))),
+            "attendu ScpEvent::Error, obtenu {:?}",
+            event
         );
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Wallix"));
     }
 
     /// Vérifie que `spawn_sftp` retourne une erreur (via le channel) quand le
@@ -647,6 +1126,7 @@ mod tests {
             wallix_selection_timeout_secs: 8,
             wallix_direct: false,
             wallix_authorization: None,
+            wallix_authorizations: vec![],
             wallix_header_columns: vec![],
         }
     }

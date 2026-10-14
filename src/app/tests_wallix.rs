@@ -25,6 +25,7 @@ fn wallix_test_server(group: Option<&str>) -> ResolvedServer {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
         use_system_ssh_config: false,
         probe_filesystems: vec![],
@@ -586,4 +587,42 @@ fn poll_wallix_selector_auto_select_false_opens_list() {
         Some(WallixSelectorState::List { .. })
     ));
     assert!(app.take_pending_wallix_connection().is_none());
+}
+
+/// Une seule autorisation connue par la config → connexion directe, sans menu.
+#[test]
+fn wallix_selector_skipped_with_single_configured_authorization() {
+    let mut app = App::new(
+        make_namespace_config(),
+        vec![],
+        std::path::PathBuf::new(),
+        vec![],
+    )
+    .unwrap();
+    app.connection_mode = ConnectionMode::Wallix;
+
+    let mut server = wallix_test_server(Some("dev-admins"));
+    server.wallix_authorizations = vec!["PP-ALPHA_dev-admins".into()];
+    assert!(!app.should_open_wallix_selector(&server));
+
+    let mut server = wallix_test_server(Some("dev-admins"));
+    server.wallix_authorization = Some("STI-X_dev-admins".into());
+    assert!(!app.should_open_wallix_selector(&server));
+}
+
+/// Plusieurs autorisations candidates → le menu Wallix départage (dernier recours).
+#[test]
+fn wallix_selector_required_with_several_configured_authorizations() {
+    let mut app = App::new(
+        make_namespace_config(),
+        vec![],
+        std::path::PathBuf::new(),
+        vec![],
+    )
+    .unwrap();
+    app.connection_mode = ConnectionMode::Wallix;
+
+    let mut server = wallix_test_server(Some("dev-admins"));
+    server.wallix_authorizations = vec!["PP-A_dev-admins".into(), "PP-B_dev-admins".into()];
+    assert!(app.should_open_wallix_selector(&server));
 }

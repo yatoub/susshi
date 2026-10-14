@@ -41,6 +41,7 @@ fn base_server() -> ResolvedServer {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
     }
 }
@@ -474,4 +475,36 @@ fn sync_winsize_copies_size_to_master() {
     let rc = unsafe { libc::ioctl(pty.slave.as_raw_fd(), libc::TIOCGWINSZ, &mut read) };
     assert_eq!(rc, 0);
     assert_eq!((read.ws_row, read.ws_col), (42, 133));
+}
+
+// ── Wallix : login direct quand l'autorisation est connue par la config ──────
+
+/// Autorisation unique → `ssh -A -l user@cible+SSH+AUTH+bastion_user bastion`.
+#[test]
+fn wallix_direct_login_with_configured_authorization() {
+    let mut s = base_server();
+    s.bastion_host = Some("bastion.example.com:8022".into());
+    s.bastion_user = Some("buser".into());
+    s.wallix_authorizations = vec!["PR-COLIBRIS_ces3s-admins".into()];
+    let args = build_ssh_args(&s, ConnectionMode::Wallix, false).unwrap();
+    let l_pos = args.iter().position(|a| a == "-l").expect("-l present");
+    assert_eq!(
+        args[l_pos + 1],
+        "admin@198.51.100.1+SSH+PR-COLIBRIS_ces3s-admins+buser"
+    );
+    assert!(args.contains(&"-A".to_string()), "{args:?}");
+    assert!(args.contains(&"8022".to_string()), "{args:?}");
+    assert_eq!(args.last().map(String::as_str), Some("bastion.example.com"));
+}
+
+/// Plusieurs autorisations : pas de login direct (le menu départage).
+#[test]
+fn wallix_several_authorizations_keep_template_login() {
+    let mut s = base_server();
+    s.bastion_host = Some("bastion.example.com".into());
+    s.bastion_user = Some("buser".into());
+    s.wallix_authorizations = vec!["PR-A_x".into(), "PR-B_x".into()];
+    let args = build_ssh_args(&s, ConnectionMode::Wallix, false).unwrap();
+    let l_pos = args.iter().position(|a| a == "-l").expect("-l present");
+    assert_eq!(args[l_pos + 1], "admin@198.51.100.1:SSH:buser");
 }

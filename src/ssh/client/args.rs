@@ -146,9 +146,21 @@ pub fn build_ssh_args(
                     "Wallix host not configured for this server"
                 ));
             }
-            let bastion_user = server.bastion_user.as_deref().unwrap_or("root");
-            let (t_host, _t_port) = parse_host_port(&server.host);
-            let user_string = build_wallix_login_user(server, bastion_user, t_host);
+            let user_string = match crate::wallix::direct_authorization(server) {
+                // Autorisation connue → login direct (sans menu). `-A` : le
+                // bastion s'authentifie sur la cible via l'agent transféré.
+                Some(auth) => {
+                    if !server.agent_forwarding {
+                        args.push("-A".into());
+                    }
+                    crate::wallix::build_direct_login(server, Some(&auth))
+                }
+                None => {
+                    let bastion_user = server.bastion_user.as_deref().unwrap_or("root");
+                    let (t_host, _t_port) = parse_host_port(&server.host);
+                    build_wallix_login_user(server, bastion_user, t_host)
+                }
+            };
             args.push("-l".into());
             args.push(user_string);
             let (b_host, b_port) = parse_host_port(bastion_host_str);

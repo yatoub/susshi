@@ -101,6 +101,7 @@ fn test_merge_bastion() {
         selection_timeout_secs: None,
         direct: None,
         authorization: None,
+        authorizations: None,
         header_columns: None,
     });
     let child = BastionConfig {
@@ -115,6 +116,7 @@ fn test_merge_bastion() {
         selection_timeout_secs: None,
         direct: None,
         authorization: None,
+        authorizations: None,
         header_columns: None,
     };
 
@@ -146,6 +148,7 @@ fn test_resolve_inherits_wallix_group_from_defaults_wallix() {
                 selection_timeout_secs: None,
                 direct: None,
                 authorization: None,
+                authorizations: None,
                 header_columns: None,
             }),
             ..Default::default()
@@ -2540,4 +2543,66 @@ fn test_merge_default_structs_production_fields() {
     let merged = merge_default_structs(&base, &over);
     assert_eq!(merged.production, Some(false));
     assert_eq!(merged.confirm_production, Some(true));
+}
+
+/// `wallix.authorizations` est hérité (env > groupe > defaults) et `{group}`
+/// est remplacé par le suffixe `wallix.group` résolu.
+#[test]
+fn test_resolve_wallix_authorizations_with_group_placeholder() {
+    let yaml = r#"
+defaults:
+  mode: wallix
+  user: jdoe
+  wallix:
+    host: bastion.example.com
+    user: jdoe
+    group: ces3s-admins
+groups:
+  - name: COLIBRIS
+    wallix:
+      authorizations: ["COLIBRIS_{group}"]
+    environments:
+      - name: PR
+        wallix:
+          authorizations:
+            - "PR-COLIBRIS_{group}"
+            - "PR-ALT_{group}"
+        servers:
+          - name: apps01
+            host: pr-clb-apps01.example.fr
+      - name: PP
+        servers:
+          - name: apps01
+            host: pp-clb-apps01.example.fr
+"#;
+    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let resolved = config.resolve().unwrap();
+    let pr = resolved.iter().find(|s| s.env_name == "PR").unwrap();
+    assert_eq!(
+        pr.wallix_authorizations,
+        vec!["PR-COLIBRIS_ces3s-admins", "PR-ALT_ces3s-admins"]
+    );
+    let pp = resolved.iter().find(|s| s.env_name == "PP").unwrap();
+    assert_eq!(pp.wallix_authorizations, vec!["COLIBRIS_ces3s-admins"]);
+}
+
+/// Sans `wallix.group`, une entrée contenant `{group}` est ignorée (elle ne
+/// désignerait aucune autorisation réelle) ; les entrées complètes sont gardées.
+#[test]
+fn test_resolve_wallix_authorizations_without_group_drops_placeholders() {
+    let yaml = r#"
+defaults:
+  mode: wallix
+  wallix:
+    host: bastion.example.com
+    authorizations: ["PR-X_{group}", "PR-X_admins"]
+groups:
+  - name: G
+    servers:
+      - name: s
+        host: s.example.fr
+"#;
+    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let resolved = config.resolve().unwrap();
+    assert_eq!(resolved[0].wallix_authorizations, vec!["PR-X_admins"]);
 }

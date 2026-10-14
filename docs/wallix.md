@@ -87,6 +87,41 @@ When automatic resolution fails (no match or ambiguity), susshi opens a focused 
 - If Wallix asks for a secondary prompt like `Adresse cible`, susshi auto-fills the configured server host.
 - If no reliable match is found, susshi falls back to manual in-session selection.
 
+## Declaring Authorizations (recommended)
+
+Declare the Wallix authorizations in the configuration so susshi never has to guess. `wallix.authorizations` is a list inherited like any other Wallix field (defaults → group → environment → server, the most specific level wins). `{group}` is replaced by the resolved `wallix.group` suffix:
+
+```yaml
+defaults:
+  wallix:
+    host: "ssh.bastion.example"
+    user: "jdoe"
+    group: "ces3s-admins"            # suffix shared by every authorization
+
+groups:
+  - name: "COLIBRIS"
+    environments:
+      - name: "PR"
+        wallix:
+          authorizations:
+            - "PR-COLIBRIS_{group}"  # → PR-COLIBRIS_ces3s-admins
+      - name: "PP - BaS"
+        wallix:
+          authorizations:            # several candidates, in order of preference
+            - "PP-COLIBRIS_{group}"
+            - "PP-BAS_{group}"
+```
+
+Resolution order (interactive SSH and SCP):
+
+1. `wallix.authorization` — exact name, always first.
+2. `wallix.authorizations` — declared candidates, in order.
+3. Last resort: detection — the name derived from the YAML structure (`<ENV>-<GROUP>_<group>`), then the Wallix menu.
+
+When exactly **one** authorization is known from the configuration, susshi connects directly with `ssh -A -l user@target+SSH+AUTHORIZATION+bastion_user bastion`: no menu probe, no PTY relay. Agent forwarding (`-A`) lets the bastion authenticate on the target with your SSH agent. With several candidates, the Wallix menu picks among them (in order). SCP tries each candidate in order and moves to the next one when Wallix answers `Cible invalide`.
+
+An entry containing `{group}` is ignored when no `wallix.group` is resolved.
+
 ## Forcing a Specific Authorization
 
 When a target has multiple Wallix authorizations (different groups), set `wallix.authorization` to the exact authorization name shown in the Wallix menu:
@@ -105,7 +140,7 @@ groups:
           direct: true
 ```
 
-`authorization` takes priority over `group` and is passed verbatim in the SSH login string. Combined with `direct: true`, this gives instant zero-delay connections for servers where the authorization is known in advance.
+`authorization` takes priority over `authorizations` and `group`. It is passed verbatim in the direct login string (`user@target+SSH+AUTHORIZATION+bastion_user`), so the connection opens immediately without going through the menu.
 
 **When to use:** When `auto_select` resolves the wrong entry, or when a server has multiple authorizations and you want to pin the right one without going through the menu.
 

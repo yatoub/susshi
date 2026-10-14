@@ -138,7 +138,62 @@ fn normalize_authorization_segment(value: &str) -> String {
     normalized.trim_matches('-').to_string()
 }
 
+/// Autorisations Wallix déclarées en config, par ordre de préférence :
+/// `wallix.authorization` (nom exact) puis `wallix.authorizations`.
+///
+/// Vide si rien n'est configuré : il faut alors recourir à la détection
+/// (nom dérivé de la structure YAML, puis menu Wallix).
+pub fn configured_authorizations(server: &ResolvedServer) -> Vec<String> {
+    let mut list: Vec<String> = Vec::new();
+    let explicit = server
+        .wallix_authorization
+        .as_deref()
+        .map(str::trim)
+        .filter(|a| !a.is_empty());
+    for auth in explicit
+        .into_iter()
+        .chain(server.wallix_authorizations.iter().map(String::as_str))
+    {
+        if !list.iter().any(|a| a == auth) {
+            list.push(auth.to_string());
+        }
+    }
+    list
+}
+
+/// Autorisation à utiliser pour une connexion directe (sans menu) : présente
+/// uniquement si la config en désigne exactement une. Avec plusieurs
+/// candidates, c'est le menu Wallix qui départage.
+pub fn direct_authorization(server: &ResolvedServer) -> Option<String> {
+    let mut auths = configured_authorizations(server);
+    if auths.len() == 1 { auths.pop() } else { None }
+}
+
+/// Login Wallix « direct » (sans menu) : `user@cible+PROTO[+autorisation]+bastion_user`.
+///
+/// Le port éventuel de `server.host` est retiré : c'est le bastion qui joint la cible.
+pub fn build_direct_login(server: &ResolvedServer, authorization: Option<&str>) -> String {
+    let target_host = server
+        .host
+        .split_once(':')
+        .map_or(server.host.as_str(), |(h, _)| h);
+    let bastion_user = server.bastion_user.as_deref().unwrap_or("root");
+    let mut login = format!("{}@{}+{}", server.user, target_host, server.wallix_protocol);
+    if let Some(auth) = authorization.map(str::trim).filter(|a| !a.is_empty()) {
+        login.push('+');
+        login.push_str(auth);
+    }
+    login.push('+');
+    login.push_str(bastion_user);
+    login
+}
+
+/// Autorisations candidates pour la sélection dans le menu Wallix, par ordre
+/// de préférence : celles déclarées en config, puis la détection (suffixe
+/// `group` seul, puis `<ENV>-<GROUPE>_<group>` dérivé de la structure YAML).
 pub fn build_expected_groups(server: &ResolvedServer) -> Result<Vec<String>> {
+    let mut candidates = configured_authorizations(server);
+
     let configured_group = match server
         .wallix_group
         .as_deref()
@@ -146,10 +201,10 @@ pub fn build_expected_groups(server: &ResolvedServer) -> Result<Vec<String>> {
         .filter(|g| !g.is_empty())
     {
         Some(g) => g,
-        None => return Ok(vec![]),
+        None => return Ok(candidates),
     };
 
-    let mut candidates = vec![configured_group.to_string()];
+    candidates.push(configured_group.to_string());
 
     if !configured_group.contains('_') {
         let mut prefix_parts = Vec::new();
@@ -171,8 +226,13 @@ pub fn build_expected_groups(server: &ResolvedServer) -> Result<Vec<String>> {
         }
     }
 
-    candidates.dedup();
-    Ok(candidates)
+    let mut unique: Vec<String> = Vec::with_capacity(candidates.len());
+    for c in candidates {
+        if !unique.contains(&c) {
+            unique.push(c);
+        }
+    }
+    Ok(unique)
 }
 
 pub(crate) fn group_suffix_matches(entry_group: &str, configured_group: &str) -> bool {

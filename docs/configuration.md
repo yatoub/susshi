@@ -159,6 +159,7 @@ wallix:
   selection_timeout_secs: 8
   # direct: false          # set true to skip menu probe for direct-checkout targets
   # authorization: ""      # force exact Wallix authorization name (skips menu matching)
+  # authorizations: ["PR-APP_{group}"]  # candidate authorizations, {group} = suffix above
   # header_columns: ["ID", "Cible", "Autorisation"]  # override if bastion uses different column labels
 ```
 
@@ -169,6 +170,7 @@ Wallix-specific fields:
 - `template` — login-string template. Default: `{target_user}@%n:SSH:{bastion_user}`.
 - `direct` — skip the menu probe entirely. Use when the authorization is guaranteed.
 - `authorization` — force the exact Wallix authorization name. Skips menu matching when set.
+- `authorizations` — candidate authorization names, in order of preference; `{group}` is replaced by `group`. A single candidate enables the direct login (no menu); several are tried in order. See [Wallix Guide](wallix.md#declaring-authorizations-recommended).
 - `header_columns` — list of tokens used to detect the menu header row. Override if your bastion uses localized or custom column names.
 
 ### Tunnels
