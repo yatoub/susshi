@@ -241,6 +241,7 @@ fn test_build_expected_target_from_resolved_server() {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
         use_system_ssh_config: false,
         probe_filesystems: vec![],
@@ -297,6 +298,7 @@ fn test_select_id_for_server_uses_resolved_server_fields() {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
         use_system_ssh_config: false,
         probe_filesystems: vec![],
@@ -350,6 +352,7 @@ fn test_select_id_for_server_single_entry_no_group() {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
         use_system_ssh_config: false,
         probe_filesystems: vec![],
@@ -412,6 +415,7 @@ fn test_select_id_for_server_multi_entry_no_group_returns_error() {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
         use_system_ssh_config: false,
         probe_filesystems: vec![],
@@ -462,6 +466,7 @@ fn test_build_expected_groups_adds_yaml_structure_prefix() {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
         use_system_ssh_config: false,
         probe_filesystems: vec![],
@@ -513,6 +518,7 @@ fn test_build_expected_targets_adds_wallix_alias_from_fqdn_and_yaml() {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
         use_system_ssh_config: false,
         probe_filesystems: vec![],
@@ -569,6 +575,7 @@ fn test_select_id_for_server_accepts_short_group_and_yaml_structure() {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
         use_system_ssh_config: false,
         probe_filesystems: vec![],
@@ -622,6 +629,7 @@ fn test_select_id_for_server_case_insensitive_target() {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
         use_system_ssh_config: false,
         probe_filesystems: vec![],
@@ -675,6 +683,7 @@ fn test_select_id_for_server_accepts_prefixed_group_suffix() {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
         use_system_ssh_config: false,
         probe_filesystems: vec![],
@@ -714,4 +723,106 @@ fn test_parse_realistic_wallix_output() {
     assert_eq!(entries.len(), 3);
     assert_eq!(entries[0].id, "0001");
     assert_eq!(entries[2].group, "APP-ALPHA_ops-admins");
+}
+
+/// Serveur Wallix de test (groupe YAML `ALPHA`, env `PP`, suffixe `dev-admins`).
+fn alpha_server() -> ResolvedServer {
+    ResolvedServer {
+        namespace: String::new(),
+        group_name: "ALPHA".to_string(),
+        env_name: "PP".to_string(),
+        name: "alpha-dev".to_string(),
+        host: "APP-ALPHA-BD".to_string(),
+        user: "demo_user".to_string(),
+        port: 22,
+        ssh_key: String::new(),
+        ssh_options: vec![],
+        default_mode: crate::config::ConnectionMode::Wallix,
+        jump_host: None,
+        bastion_host: Some("bastion.example.test".to_string()),
+        bastion_user: Some("demo_user".to_string()),
+        bastion_template: "{target_user}@%n:SSH:{bastion_user}".to_string(),
+        wallix_group: Some("dev-admins".to_string()),
+        wallix_account: "default".to_string(),
+        wallix_protocol: "SSH".to_string(),
+        wallix_auto_select: true,
+        wallix_fail_if_menu_match_error: true,
+        wallix_selection_timeout_secs: 8,
+        wallix_direct: false,
+        wallix_authorization: None,
+        wallix_authorizations: vec![],
+        wallix_header_columns: vec![],
+        use_system_ssh_config: false,
+        probe_filesystems: vec![],
+        tunnels: vec![],
+        tags: vec![],
+        control_master: false,
+        agent_forwarding: false,
+        control_path: String::new(),
+        control_persist: "10m".to_string(),
+        pre_connect_hook: None,
+        post_disconnect_hook: None,
+        hook_timeout_secs: 5,
+        ssh_cert: String::new(),
+        notes: String::new(),
+        production: false,
+        confirm_production: false,
+        ssh_agent_sock: String::new(),
+    }
+}
+
+/// Ordre : `authorization` (nom exact), puis `authorizations` (config), sans doublon.
+#[test]
+fn test_configured_authorizations_order() {
+    let mut server = alpha_server();
+    assert!(configured_authorizations(&server).is_empty());
+
+    server.wallix_authorizations = vec!["PP-ALPHA_dev-admins".into(), "PP-B_dev-admins".into()];
+    assert_eq!(
+        configured_authorizations(&server),
+        vec!["PP-ALPHA_dev-admins", "PP-B_dev-admins"]
+    );
+
+    server.wallix_authorization = Some("PP-B_dev-admins".into());
+    assert_eq!(
+        configured_authorizations(&server),
+        vec!["PP-B_dev-admins", "PP-ALPHA_dev-admins"]
+    );
+}
+
+/// Login direct Wallix : `user@cible+PROTO[+autorisation]+bastion_user`.
+#[test]
+fn test_build_direct_login() {
+    let mut server = alpha_server();
+    server.host = "pr-clb-apps01.example.fr:2222".into();
+    assert_eq!(
+        build_direct_login(&server, Some("PR-COLIBRIS_dev-admins")),
+        "demo_user@pr-clb-apps01.example.fr+SSH+PR-COLIBRIS_dev-admins+demo_user"
+    );
+    assert_eq!(
+        build_direct_login(&server, None),
+        "demo_user@pr-clb-apps01.example.fr+SSH+demo_user"
+    );
+}
+
+/// Les autorisations configurées passent avant la détection dans le menu.
+#[test]
+fn test_build_expected_groups_puts_configured_first() {
+    let mut server = alpha_server();
+    server.wallix_authorizations = vec!["PP-CUSTOM_dev-admins".into()];
+    assert_eq!(
+        build_expected_groups(&server).unwrap(),
+        vec![
+            "PP-CUSTOM_dev-admins".to_string(),
+            "dev-admins".to_string(),
+            "PP-ALPHA_dev-admins".to_string()
+        ]
+    );
+
+    // Sans suffixe `group`, les autorisations configurées restent utilisables.
+    server.wallix_group = None;
+    assert_eq!(
+        build_expected_groups(&server).unwrap(),
+        vec!["PP-CUSTOM_dev-admins".to_string()]
+    );
 }

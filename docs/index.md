@@ -76,7 +76,7 @@ For DEB/RPM packages see the [releases page](https://github.com/yatoub/susshi/re
 | --- | --- |
 | Fuzzy search | Filter hundreds of servers instantly with `#tag` and text queries |
 | Jump hosts | Multi-hop connections without manual `ProxyJump` chains |
-| Wallix bastion | Full Wallix auth menu integration |
+| Wallix bastion | Declared authorizations with direct login, menu integration as fallback, SCP and tunnels through the bastion |
 | SSH tunnels | Persistent tunnels with in-TUI manager |
 | SCP transfers | File transfers without leaving the terminal |
 | Import / Export | Import from `~/.ssh/config`, export to Ansible, Terraform, Nmap, CSV |

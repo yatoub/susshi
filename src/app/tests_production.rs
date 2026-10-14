@@ -19,7 +19,7 @@ groups:
             host: "203.0.113.5"
 "#
     );
-    let config: Config = serde_yaml_ng::from_str(&yaml).unwrap();
+    let config: Config = serde_saphyr::from_str(&yaml).unwrap();
     let servers = config.resolve().unwrap();
     servers.into_iter().find(|s| s.name == "srv").unwrap()
 }

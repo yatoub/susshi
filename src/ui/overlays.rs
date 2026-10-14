@@ -10,6 +10,7 @@ use crate::app::{
     App, AppMode, ConfigItem, ScpFormField, ScpState, TunnelFormField, TunnelOverlayState,
     WallixSelectorState, WizardField, WizardState,
 };
+use crate::config::ConnectionMode;
 use crate::fl;
 use crate::ssh::sftp::ScpDirection;
 use crate::ssh::tunnel::TunnelStatus;
@@ -273,9 +274,18 @@ pub(crate) fn draw_tunnel_overlay(f: &mut Frame, app: &mut App, area: Rect) {
     let server_key = App::server_key(&server);
     let n_tunnels = tunnels.len();
 
-    let content_h = (n_tunnels as u16 + 1).max(1);
-    let popup_h = (content_h + 5).min(area.height.saturating_sub(4));
+    // Via bastion Wallix : le forwarding dépend des droits de l'autorisation,
+    // pas toujours ouverts — on le signale sous la liste.
+    let wallix_note =
+        (app.connection_mode == ConnectionMode::Wallix).then(|| fl!("tunnel-overlay-wallix-note"));
+
     let popup_w: u16 = 64.min(area.width.saturating_sub(4));
+    let text_w = popup_w.saturating_sub(2).max(1);
+    let note_h = wallix_note
+        .as_ref()
+        .map_or(0, |n| (n.chars().count() as u16).div_ceil(text_w) + 1);
+    let content_h = (n_tunnels as u16 + 1).max(1);
+    let popup_h = (content_h + 5 + note_h).min(area.height.saturating_sub(4));
     let popup_area = centered_rect(popup_w, popup_h, area);
 
     f.render_widget(Clear, popup_area);
@@ -295,10 +305,20 @@ pub(crate) fn draw_tunnel_overlay(f: &mut Frame, app: &mut App, area: Rect) {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Min(1),
+            Constraint::Length(note_h),
             Constraint::Length(1),
             Constraint::Length(2),
         ])
         .split(inner);
+
+    if let Some(note) = wallix_note {
+        f.render_widget(
+            Paragraph::new(note)
+                .style(Style::default().fg(app.theme.yellow))
+                .wrap(Wrap { trim: true }),
+            chunks[1],
+        );
+    }
 
     let mut list_items: Vec<ListItem> = Vec::new();
 
@@ -370,7 +390,7 @@ pub(crate) fn draw_tunnel_overlay(f: &mut Frame, app: &mut App, area: Rect) {
     let hint_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(1), Constraint::Length(1)])
-        .split(chunks[2]);
+        .split(chunks[3]);
 
     let s = Style::default().fg(app.theme.subtext0);
     f.render_widget(
@@ -830,8 +850,15 @@ fn draw_scp_result(f: &mut Frame, app: &mut App, area: Rect) {
         _ => return,
     };
 
-    let popup_h: u16 = 5;
-    let popup_w: u16 = (msg.len() as u16 + 8).clamp(36, area.width.saturating_sub(4));
+    // Le message (ex. sortie d'erreur de scp) peut dépasser la largeur :
+    // il est replié sur plusieurs lignes et la popup s'agrandit en conséquence.
+    let msg_w = msg.chars().count() as u16 + 4;
+    let popup_w: u16 = (msg_w + 4).clamp(36, area.width.saturating_sub(4).max(36));
+    let text_w = popup_w.saturating_sub(2).max(1);
+    let msg_h = msg_w
+        .div_ceil(text_w)
+        .clamp(1, area.height.saturating_sub(6).max(1));
+    let popup_h: u16 = msg_h + 4;
     let popup_area = centered_rect(popup_w, popup_h, area);
 
     f.render_widget(Clear, popup_area);
@@ -849,7 +876,7 @@ fn draw_scp_result(f: &mut Frame, app: &mut App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(1),
+            Constraint::Length(msg_h),
             Constraint::Length(1),
             Constraint::Length(1),
         ])
@@ -859,7 +886,8 @@ fn draw_scp_result(f: &mut Frame, app: &mut App, area: Rect) {
         Paragraph::new(Line::from(vec![
             Span::styled(format!("  {} ", icon), Style::default().fg(color)),
             Span::styled(msg, Style::default().fg(app.theme.fg)),
-        ])),
+        ]))
+        .wrap(Wrap { trim: false }),
         chunks[0],
     );
     f.render_widget(

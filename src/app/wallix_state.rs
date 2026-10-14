@@ -73,8 +73,13 @@ pub(super) fn targeted_wallix_entries(
 }
 
 impl App {
-    pub fn should_open_wallix_selector(&self, _server: &ResolvedServer) -> bool {
+    pub fn should_open_wallix_selector(&self, server: &ResolvedServer) -> bool {
         if self.connection_mode != ConnectionMode::Wallix {
+            return false;
+        }
+
+        // Autorisation connue par la config → login direct, pas de menu.
+        if crate::wallix::direct_authorization(server).is_some() {
             return false;
         }
 

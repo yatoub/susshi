@@ -101,6 +101,7 @@ fn test_merge_bastion() {
         selection_timeout_secs: None,
         direct: None,
         authorization: None,
+        authorizations: None,
         header_columns: None,
     });
     let child = BastionConfig {
@@ -115,6 +116,7 @@ fn test_merge_bastion() {
         selection_timeout_secs: None,
         direct: None,
         authorization: None,
+        authorizations: None,
         header_columns: None,
     };
 
@@ -146,6 +148,7 @@ fn test_resolve_inherits_wallix_group_from_defaults_wallix() {
                 selection_timeout_secs: None,
                 direct: None,
                 authorization: None,
+                authorizations: None,
                 header_columns: None,
             }),
             ..Default::default()
@@ -1136,7 +1139,7 @@ fn test_keep_open_absent_defaults_to_none() {
     let yaml = r#"
 groups: []
 "#;
-    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
     assert!(config.defaults.is_none() || config.defaults.unwrap().keep_open.is_none());
 }
 
@@ -1147,7 +1150,7 @@ defaults:
   keep_open: true
 groups: []
 "#;
-    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
     let keep_open = config
         .defaults
         .as_ref()
@@ -1163,7 +1166,7 @@ defaults:
   keep_open: false
 groups: []
 "#;
-    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
     let keep_open = config
         .defaults
         .as_ref()
@@ -2371,7 +2374,7 @@ fn test_git_outdated_dedups_same_repo() {
 // ─── Production flag ──────────────────────────────────────────────────────
 
 fn resolve_yaml(yaml: &str) -> Vec<ResolvedServer> {
-    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
     config.resolve().unwrap()
 }
 
@@ -2540,4 +2543,88 @@ fn test_merge_default_structs_production_fields() {
     let merged = merge_default_structs(&base, &over);
     assert_eq!(merged.production, Some(false));
     assert_eq!(merged.confirm_production, Some(true));
+}
+
+/// `wallix.authorizations` est hérité (env > groupe > defaults) et `{group}`
+/// est remplacé par le suffixe `wallix.group` résolu.
+#[test]
+fn test_resolve_wallix_authorizations_with_group_placeholder() {
+    let yaml = r#"
+defaults:
+  mode: wallix
+  user: jdoe
+  wallix:
+    host: bastion.example.com
+    user: jdoe
+    group: ces3s-admins
+groups:
+  - name: COLIBRIS
+    wallix:
+      authorizations: ["COLIBRIS_{group}"]
+    environments:
+      - name: PR
+        wallix:
+          authorizations:
+            - "PR-COLIBRIS_{group}"
+            - "PR-ALT_{group}"
+        servers:
+          - name: apps01
+            host: pr-clb-apps01.example.fr
+      - name: PP
+        servers:
+          - name: apps01
+            host: pp-clb-apps01.example.fr
+"#;
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
+    let resolved = config.resolve().unwrap();
+    let pr = resolved.iter().find(|s| s.env_name == "PR").unwrap();
+    assert_eq!(
+        pr.wallix_authorizations,
+        vec!["PR-COLIBRIS_ces3s-admins", "PR-ALT_ces3s-admins"]
+    );
+    let pp = resolved.iter().find(|s| s.env_name == "PP").unwrap();
+    assert_eq!(pp.wallix_authorizations, vec!["COLIBRIS_ces3s-admins"]);
+}
+
+/// Sans `wallix.group`, une entrée contenant `{group}` est ignorée (elle ne
+/// désignerait aucune autorisation réelle) ; les entrées complètes sont gardées.
+#[test]
+fn test_resolve_wallix_authorizations_without_group_drops_placeholders() {
+    let yaml = r#"
+defaults:
+  mode: wallix
+  wallix:
+    host: bastion.example.com
+    authorizations: ["PR-X_{group}", "PR-X_admins"]
+groups:
+  - name: G
+    servers:
+      - name: s
+        host: s.example.fr
+"#;
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
+    let resolved = config.resolve().unwrap();
+    assert_eq!(resolved[0].wallix_authorizations, vec!["PR-X_admins"]);
+}
+
+/// Réutilisation intensive d'ancres (beaucoup d'alias pour peu d'ancres),
+/// courante dans les inventaires (`probe_filesystems: *MNT`) : ne doit pas
+/// être rejetée par l'heuristique de ratio alias/ancres du parseur.
+#[test]
+fn test_parse_yaml_accepts_heavy_anchor_reuse() {
+    let mut yaml =
+        String::from("definitions:\n  mnt: &MNT [\"/data\"]\ngroups:\n  - name: G\n    servers:\n");
+    for i in 0..300 {
+        yaml.push_str(&format!(
+            "      - name: s{i}\n        host: s{i}.example.fr\n        probe_filesystems: *MNT\n"
+        ));
+    }
+    let config: Config = parse_yaml(&yaml).expect("anchors reused 300 times");
+    let resolved = config.resolve().unwrap();
+    assert_eq!(resolved.len(), 300);
+    assert!(
+        resolved
+            .iter()
+            .all(|s| s.probe_filesystems.contains(&"/data".to_string()))
+    );
 }

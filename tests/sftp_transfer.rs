@@ -47,6 +47,7 @@ fn test_server() -> ResolvedServer {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
     }
 }

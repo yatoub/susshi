@@ -29,7 +29,7 @@ fn render_group_yaml_includes_all_fields_when_user_set() {
         user: "deploy".to_string(),
     };
     let yaml = render_group_yaml(&form);
-    let parsed: Config = serde_yaml_ng::from_str(&yaml).unwrap();
+    let parsed: Config = serde_saphyr::from_str(&yaml).unwrap();
     assert_eq!(parsed.groups.len(), 1);
     let ConfigEntry::Group(group) = &parsed.groups[0] else {
         panic!("expected a Group entry");
@@ -51,7 +51,7 @@ fn render_group_yaml_omits_user_when_blank() {
         user: String::new(),
     };
     let yaml = render_group_yaml(&form);
-    let parsed: Config = serde_yaml_ng::from_str(&yaml).unwrap();
+    let parsed: Config = serde_saphyr::from_str(&yaml).unwrap();
     let ConfigEntry::Group(group) = &parsed.groups[0] else {
         panic!("expected a Group entry");
     };
@@ -67,7 +67,7 @@ fn render_group_yaml_escapes_quotes_and_backslashes() {
         user: String::new(),
     };
     let yaml = render_group_yaml(&form);
-    let parsed: Config = serde_yaml_ng::from_str(&yaml).unwrap();
+    let parsed: Config = serde_saphyr::from_str(&yaml).unwrap();
     let ConfigEntry::Group(group) = &parsed.groups[0] else {
         panic!("expected a Group entry");
     };
@@ -234,6 +234,6 @@ fn wizard_submit_writes_config_reloads_and_closes_wizard() {
     assert_eq!(app.resolved_servers[0].user, "deploy");
 
     let on_disk = fs::read_to_string(&app.config_path).unwrap();
-    let reparsed: Config = serde_yaml_ng::from_str(&on_disk).unwrap();
+    let reparsed: Config = serde_saphyr::from_str(&on_disk).unwrap();
     assert_eq!(reparsed.groups.len(), 1);
 }

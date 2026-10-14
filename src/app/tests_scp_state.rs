@@ -51,11 +51,11 @@ fn make_app_with_server() -> App {
 // ── open_scp_select_direction ────────────────────────────────────────────────
 
 #[test]
-fn open_scp_wallix_mode_noop() {
+fn open_scp_wallix_mode_sets_selecting_direction() {
     let mut app = make_app_with_server();
     app.connection_mode = ConnectionMode::Wallix;
     app.open_scp_select_direction();
-    assert!(matches!(app.scp_state, ScpState::Idle));
+    assert!(matches!(app.scp_state, ScpState::SelectingDirection));
 }
 
 #[test]
@@ -321,6 +321,8 @@ fn poll_scp_events_with_disconnected_rx() {
     app.poll_scp_events();
     // After disconnected rx, scp_rx should be cleared.
     assert!(app.scp_rx.is_none());
+    // Un thread terminé sans Done/Error ne doit pas laisser Running indéfiniment.
+    assert!(matches!(app.scp_state, ScpState::Error(_)));
 }
 
 #[test]
@@ -330,8 +332,8 @@ fn poll_scp_events_progress_updates_state() {
     app.scp_rx = Some(rx);
 
     tx.send(crate::ssh::sftp::ScpEvent::Progress(42)).unwrap();
-    drop(tx);
 
+    // `tx` reste vivant : le thread de transfert est toujours en cours.
     app.poll_scp_events();
 
     if let ScpState::Running { progress, .. } = &app.scp_state {
@@ -349,8 +351,8 @@ fn poll_scp_events_file_size_updates_state() {
 
     tx.send(crate::ssh::sftp::ScpEvent::FileSize(1024 * 1024))
         .unwrap();
-    drop(tx);
 
+    // `tx` reste vivant : le thread de transfert est toujours en cours.
     app.poll_scp_events();
 
     if let ScpState::Running { file_size, .. } = &app.scp_state {

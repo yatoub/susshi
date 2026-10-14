@@ -25,6 +25,59 @@ Enable Wallix on a server:
   mode: "wallix"
 ```
 
+## Declaring Authorizations (recommended)
+
+Declare the Wallix authorizations in the configuration so susshi never has to guess. `wallix.authorizations` is a list inherited like any other Wallix field (defaults → group → environment → server, the most specific level wins). `{group}` is replaced by the resolved `wallix.group` suffix:
+
+```yaml
+defaults:
+  wallix:
+    host: "ssh.bastion.example"
+    user: "jdoe"
+    group: "ces3s-admins"            # suffix shared by every authorization
+
+groups:
+  - name: "COLIBRIS"
+    environments:
+      - name: "PR"
+        wallix:
+          authorizations:
+            - "PR-COLIBRIS_{group}"  # → PR-COLIBRIS_ces3s-admins
+      - name: "PP - BaS"
+        wallix:
+          authorizations:            # several candidates, in order of preference
+            - "PP-COLIBRIS_{group}"
+            - "PP-BAS_{group}"
+```
+
+Resolution order (interactive SSH, SCP and tunnels):
+
+1. `wallix.authorization` — exact name, always first (`{group}` is not replaced there).
+2. `wallix.authorizations` — declared candidates, in order.
+3. Last resort: detection — the name derived from the YAML structure (`<ENV>-<GROUP>_<group>`), then the Wallix menu.
+
+An entry containing `{group}` is ignored when no `wallix.group` is resolved.
+
+> **Tip:** the authorization names are listed in the Wallix menu (`Autorisation` column) when you connect to the bastion without a target.
+
+## How susshi Connects
+
+### Direct login (authorization known)
+
+When exactly **one** authorization is known from the configuration, susshi connects directly:
+
+```bash
+ssh -A -l "user@target+SSH+AUTHORIZATION+bastion_user" bastion
+```
+
+There is no menu probe and no PTY relay: `ssh` drives the terminal itself. Agent forwarding (`-A`) lets the bastion authenticate on the target with your SSH agent, so your key must be loaded in the agent (`ssh-add -l`).
+
+### Menu flow (last resort)
+
+Without a single known authorization (none, or several candidates), susshi goes through the Wallix menu: it opens the bastion session in a PTY, parses the menu, selects the matching entry, then relays the session to your terminal. Declared candidates are tried first when matching the menu, then the detected names.
+
+The relay puts your terminal in raw mode and forwards window resizes, so Tab completion, arrow keys, Ctrl+R/Ctrl+C and full-screen tools (`vim`, `less`, `top`) behave as in a plain `ssh` session.
+
 ## Group Inheritance and Override
 
 `wallix.group` follows the same inheritance model as other susshi settings.
@@ -52,9 +105,11 @@ groups:
           group: "qa-admins"
 ```
 
-## Automatic SSH User Identity
+## Menu Flow Details
 
-When `mode: wallix` is active, susshi builds the SSH `User` field as:
+### SSH user identity
+
+In the menu flow, susshi builds the SSH `User` field as:
 
 `<wallix_user>@<target_fqdn>:SSH[:<ENV_GROUP>]:<wallix_user>`
 
@@ -64,15 +119,15 @@ Where:
 - `<ENV_GROUP>` is included only when a deterministic authorization group is resolved.
 - If resolution is ambiguous, susshi avoids generating a potentially wrong authorization silently.
 
-## Selection Strategy
+### Selection strategy
 
-When `mode: wallix` is active, susshi computes candidates before selecting an ID in the Wallix menu:
+susshi computes candidates before selecting an ID in the Wallix menu:
 
 - Target candidates: FQDN, short host, and structure-derived aliases.
-- Group candidates: configured `wallix.group` plus structure-derived variants.
+- Authorization candidates: declared `authorization` / `authorizations` first, then `wallix.group` and structure-derived variants.
 - Prefixed authorizations are supported (for example, `ST-ANSIBLE_devops-admins` matches `devops-admins`).
 
-## Targeted Fallback Popup
+### Targeted fallback popup
 
 When automatic resolution fails (no match or ambiguity), susshi opens a focused popup instead of exposing the full global menu flow.
 
@@ -81,37 +136,15 @@ When automatic resolution fails (no match or ambiguity), susshi opens a focused 
 - The selected Wallix entry ID is cached for the current session.
 - During nominal flow, the global pseudo-TTY menu output stays hidden.
 
-## Pagination and Fallback
+### Pagination and fallback
 
 - Paginated menus are scanned automatically (`page X/Y`, then `n`).
 - If Wallix asks for a secondary prompt like `Adresse cible`, susshi auto-fills the configured server host.
 - If no reliable match is found, susshi falls back to manual in-session selection.
 
-## Forcing a Specific Authorization
+### Direct connection mode (`direct`)
 
-When a target has multiple Wallix authorizations (different groups), set `wallix.authorization` to the exact authorization name shown in the Wallix menu:
-
-```yaml
-groups:
-  - name: "Secured Perimeter"
-    wallix:
-      group: "ces3s-admins"         # short form — used for menu scoring
-    servers:
-      - name: "anscore02"
-        host: "anscore02.internal.example"
-        mode: "wallix"
-        wallix:
-          authorization: "STI-ANSCORE_ces3s-admins"  # exact name from the Wallix menu
-          direct: true
-```
-
-`authorization` takes priority over `group` and is passed verbatim in the SSH login string. Combined with `direct: true`, this gives instant zero-delay connections for servers where the authorization is known in advance.
-
-**When to use:** When `auto_select` resolves the wrong entry, or when a server has multiple authorizations and you want to pin the right one without going through the menu.
-
-## Direct Connection Mode
-
-Set `wallix.direct: true` to bypass the menu probe entirely and connect in zero delay.
+`wallix.direct: true` skips the menu probe in the menu flow, for targets that Wallix always connects directly without presenting a selection menu. It has **no effect** when an authorization is known from the configuration — the direct login is used anyway.
 
 ```yaml
 defaults:
@@ -121,15 +154,36 @@ defaults:
     direct: true          # skip menu probe — Wallix connects directly
 ```
 
-**When to use:** When Wallix is configured to connect the target directly without presenting a selection menu, or when `wallix.authorization` is set and Wallix will always resolve to a single entry. Without `direct: true`, susshi still detects direct connections automatically — it just takes a few extra seconds.
+## Forcing a Specific Authorization
+
+When a server needs an authorization that does not follow the shared `{group}` suffix (for example a `…_crtech-admins` authorization on a single server), set `wallix.authorization` to the exact name shown in the Wallix menu:
+
+```yaml
+groups:
+  - name: "Secured Perimeter"
+    servers:
+      - name: "anscore02"
+        host: "anscore02.internal.example"
+        mode: "wallix"
+        wallix:
+          authorization: "STI-ANSCORE_crtech-admins"  # exact name from the Wallix menu
+```
+
+`authorization` takes priority over `authorizations` and `group`. It is passed verbatim in the direct login string, so the connection opens immediately without going through the menu. When the name follows the shared suffix, prefer `authorizations: ["STI-ANSCORE_{group}"]`.
+
+## SCP and Tunnels
+
+- **SCP** ([scp.md](scp.md)) goes through the system `scp` binary with the direct login: `scp -A … user@target+SSH+AUTHORIZATION+bastion_user@bastion:path`. Declared authorizations are tried in order, moving to the next one while Wallix answers `Cible invalide`; the derived name is the last resort.
+- **Tunnels** ([tunnels.md](tunnels.md)) require a known authorization (a background tunnel cannot answer the menu). susshi runs `ssh -A -T -L …` and keeps a shell session open on the target, because Wallix closes the connection when port forwarding is requested outside an open session. Port forwarding is not necessarily enabled on every environment: ask the bastion administrator if needed.
 
 ## Behavior Controls
 
-- `auto_select`: enable automatic selection attempts.
-- `fail_if_menu_match_error`: keep trying (including pagination) before falling back.
-- `selection_timeout_secs`: menu parsing timeout budget.
-- `authorization`: exact Wallix authorization name — bypasses group matching and pins the entry.
-- `direct`: skip the menu probe and connect immediately (zero-delay).
+- `authorizations`: candidate authorization names, in order; `{group}` is replaced by `group`.
+- `authorization`: exact Wallix authorization name — highest priority, pins the entry.
+- `auto_select`: enable automatic selection attempts (menu flow).
+- `fail_if_menu_match_error`: keep trying (including pagination) before falling back (menu flow).
+- `selection_timeout_secs`: menu parsing timeout budget (menu flow).
+- `direct`: skip the menu probe (menu flow only).
 - `header_columns`: list of tokens used to detect and skip the menu header line. Default: `["ID", "Cible", "Autorisation"]`. Override if your bastion shows column headers in a different language:
 
 ```yaml
@@ -140,19 +194,43 @@ defaults:
 
 ## Troubleshooting
 
-### No matching authorization
+### `Cible invalide`
 
-- Verify `wallix.group` at defaults/group/environment/server level.
-- Ensure the target host in config matches the Wallix entry target naming.
+Wallix rejects the target/authorization pair in the login string.
+
+- Check the authorization name against the `Autorisation` column of the Wallix menu.
+- Check that `host` is the name Wallix knows for the target (usually the FQDN).
+- For SCP, the error lists every target that was tried.
+
+### `signature algorithm not supported`
+
+The bastion signs with `ssh-rsa` (SHA-1), refused by default by recent OpenSSH. Allow it for susshi connections:
+
+```yaml
+defaults:
+  ssh_options:
+    - "PubkeyAcceptedKeyTypes=+ssh-rsa"
+```
+
+### Tunnel stops right after starting
+
+- The authorization may not allow port forwarding: ask the bastion administrator.
+- The tunnel status shows the message returned by `ssh` / the bastion.
+
+### No matching authorization (menu flow)
+
+- Declare the authorization in `wallix.authorizations` (see above).
+- Otherwise verify `wallix.group` at defaults/group/environment/server level and ensure the target host in config matches the Wallix entry target naming.
 - If still unresolved, use the popup and keep the selected entry for the current session.
 
-### Ambiguous authorization
+### Ambiguous authorization (menu flow)
 
 - Multiple authorizations can match the same server target.
 - susshi will not guess silently and opens the targeted popup.
-- Set a more specific `wallix.group` on the server to make resolution deterministic.
+- Declare the right one in `wallix.authorizations`, or set `wallix.authorization` on the server.
 
 ## Notes
 
 - Wallix mode can be inherited from defaults/group/environment.
 - ControlMaster multiplexing is silently disabled in Wallix mode.
+- Wallix mode is Unix-only.

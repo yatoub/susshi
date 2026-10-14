@@ -121,10 +121,12 @@ impl App {
 
     /// Demarre un tunnel SSH pour le serveur courant a l'index effectif `effective_idx`.
     ///
-    /// Sans effet (avec message d'avertissement) si le mode est Wallix ou si le tunnel
-    /// est deja en cours d'execution.
+    /// Sans effet (avec message d'avertissement) en mode Wallix sans autorisation
+    /// connue par la config, ou si le tunnel est deja en cours d'execution.
     pub fn start_tunnel(&mut self, server: &ResolvedServer, effective_idx: usize) {
-        if self.connection_mode == ConnectionMode::Wallix {
+        if self.connection_mode == ConnectionMode::Wallix
+            && !ssh_tunnel::wallix_tunnel_available(server)
+        {
             self.set_status_message(fl!("tunnel-wallix-unavailable"));
             return;
         }
@@ -254,7 +256,11 @@ impl App {
     ///
     /// Sans effet si aucun serveur n'est selectionne ou si le mode Wallix est actif.
     pub fn open_tunnel_overlay(&mut self) {
-        if self.connection_mode == ConnectionMode::Wallix {
+        if self.connection_mode == ConnectionMode::Wallix
+            && !self
+                .selected_server()
+                .is_some_and(|s| ssh_tunnel::wallix_tunnel_available(&s))
+        {
             self.set_status_message(fl!("tunnel-wallix-unavailable"));
             return;
         }

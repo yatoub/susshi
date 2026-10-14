@@ -41,6 +41,7 @@ fn base_server() -> ResolvedServer {
         wallix_selection_timeout_secs: 8,
         wallix_direct: false,
         wallix_authorization: None,
+        wallix_authorizations: vec![],
         wallix_header_columns: vec![],
     }
 }
@@ -418,4 +419,92 @@ fn askpass_file_has_700_permissions() {
         0o700,
         "askpass script must be owner-executable only (0o700)"
     );
+}
+
+// ── Relais PTY Wallix : mode raw du terminal local ───────────────────────────
+
+/// Le guard passe le terminal en mode raw (Tab, flèches et Ctrl+C relayés
+/// octet par octet, sans écho local) puis restaure l'état initial au drop.
+#[test]
+#[cfg(unix)]
+fn raw_mode_guard_sets_raw_and_restores() {
+    use nix::sys::termios::{LocalFlags, tcgetattr};
+    let pty = nix::pty::openpty(None, None).expect("openpty");
+    let before = tcgetattr(&pty.slave).expect("tcgetattr");
+    assert!(before.local_flags.contains(LocalFlags::ICANON));
+
+    {
+        let _guard = RawModeGuard::new(pty.slave.as_raw_fd()).expect("guard");
+        let raw = tcgetattr(&pty.slave).expect("tcgetattr");
+        assert!(!raw.local_flags.contains(LocalFlags::ICANON));
+        assert!(!raw.local_flags.contains(LocalFlags::ECHO));
+        assert!(!raw.local_flags.contains(LocalFlags::ISIG));
+    }
+
+    let after = tcgetattr(&pty.slave).expect("tcgetattr");
+    assert!(after.local_flags.contains(LocalFlags::ICANON));
+    assert!(after.local_flags.contains(LocalFlags::ECHO));
+}
+
+/// Sur un fd qui n'est pas un terminal (pipe, redirection), pas de guard.
+#[test]
+#[cfg(unix)]
+fn raw_mode_guard_none_for_non_tty() {
+    let (r, _w) = nix::unistd::pipe().expect("pipe");
+    assert!(RawModeGuard::new(r.as_raw_fd()).is_none());
+}
+
+/// La taille de fenêtre est recopiée sur le PTY de la session.
+#[test]
+#[cfg(unix)]
+fn sync_winsize_copies_size_to_master() {
+    let pty = nix::pty::openpty(None, None).expect("openpty");
+    let ws = Winsize {
+        ws_row: 42,
+        ws_col: 133,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
+    set_winsize(pty.master.as_raw_fd(), &ws);
+    let mut read = Winsize {
+        ws_row: 0,
+        ws_col: 0,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
+    let rc = unsafe { libc::ioctl(pty.slave.as_raw_fd(), libc::TIOCGWINSZ, &mut read) };
+    assert_eq!(rc, 0);
+    assert_eq!((read.ws_row, read.ws_col), (42, 133));
+}
+
+// ── Wallix : login direct quand l'autorisation est connue par la config ──────
+
+/// Autorisation unique → `ssh -A -l user@cible+SSH+AUTH+bastion_user bastion`.
+#[test]
+fn wallix_direct_login_with_configured_authorization() {
+    let mut s = base_server();
+    s.bastion_host = Some("bastion.example.com:8022".into());
+    s.bastion_user = Some("buser".into());
+    s.wallix_authorizations = vec!["PR-COLIBRIS_ces3s-admins".into()];
+    let args = build_ssh_args(&s, ConnectionMode::Wallix, false).unwrap();
+    let l_pos = args.iter().position(|a| a == "-l").expect("-l present");
+    assert_eq!(
+        args[l_pos + 1],
+        "admin@198.51.100.1+SSH+PR-COLIBRIS_ces3s-admins+buser"
+    );
+    assert!(args.contains(&"-A".to_string()), "{args:?}");
+    assert!(args.contains(&"8022".to_string()), "{args:?}");
+    assert_eq!(args.last().map(String::as_str), Some("bastion.example.com"));
+}
+
+/// Plusieurs autorisations : pas de login direct (le menu départage).
+#[test]
+fn wallix_several_authorizations_keep_template_login() {
+    let mut s = base_server();
+    s.bastion_host = Some("bastion.example.com".into());
+    s.bastion_user = Some("buser".into());
+    s.wallix_authorizations = vec!["PR-A_x".into(), "PR-B_x".into()];
+    let args = build_ssh_args(&s, ConnectionMode::Wallix, false).unwrap();
+    let l_pos = args.iter().position(|a| a == "-l").expect("-l present");
+    assert_eq!(args[l_pos + 1], "admin@198.51.100.1:SSH:buser");
 }

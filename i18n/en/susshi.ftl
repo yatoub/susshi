@@ -140,10 +140,10 @@ validation-title = ⚠  Configuration warnings
 validation-unknown-field = { $file } ({ $context }): unknown field "{ $field }"
 
 # ── SSH tunnels ───────────────────────────────────────────────────────────────
-tunnel-wallix-unavailable = SSH tunnels unavailable in Wallix mode
 tunnel-not-found = Tunnel #{ $index } not found for this server
 tunnel-already-active = Tunnel '{ $label }' already active (port { $port })
 tunnel-started = Tunnel '{ $label }' started on port { $port }
+tunnel-wallix-unavailable = Wallix tunnels: declare the server authorization (wallix.authorizations)
 tunnel-error = Tunnel error: { $error }
 tunnel-stopped = Tunnel '{ $label }' (port { $port }) stopped
 tunnel-died = Tunnel '{ $label }' (port { $port }) died: { $reason }
@@ -151,6 +151,7 @@ tunnel-deleted = Tunnel deleted
 tunnel-updated = Tunnel updated
 tunnel-added = Tunnel added
 tunnel-overlay-new = + (new tunnel)
+tunnel-overlay-wallix-note = ⚠ Through the bastion: this kind of session is not necessarily enabled by default on every environment. To use it, ask the bastion administrator.
 tunnel-overlay-hints1 =   ↑↓ navigate   Enter start/stop   Del delete
 tunnel-overlay-hints2 =   e edit        a add              q/Esc close
 tunnel-form-edit-title = Edit tunnel — { $server }
@@ -182,10 +183,10 @@ tunnel-badge-none =
     }
 
 # ── SCP ───────────────────────────────────────────────────────────────────────
-scp-wallix-unavailable = SCP unavailable in Wallix mode
 scp-done-ok = SCP complete ✔
 scp-done-err = SCP completed with errors ✗
 scp-failed = SCP failed: { $error }
+scp-thread-ended = transfer stopped without a result
 scp-form-local-required = Local path required
 scp-form-remote-required = Remote path required
 scp-direction-title = SCP Transfer — { $server }

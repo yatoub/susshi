@@ -4,12 +4,8 @@ use crate::fl;
 impl App {
     /// Ouvre l'etape de selection de la direction SCP pour le serveur selectionne.
     ///
-    /// Sans effet si aucun serveur n'est selectionne ou si le mode Wallix est actif.
+    /// Sans effet si aucun serveur n'est selectionne.
     pub fn open_scp_select_direction(&mut self) {
-        if self.connection_mode == ConnectionMode::Wallix {
-            self.set_status_message(fl!("scp-wallix-unavailable"));
-            return;
-        }
         if self.selected_server().is_some() {
             self.scp_state = ScpState::SelectingDirection;
         }
@@ -217,8 +213,14 @@ impl App {
                 }
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => {
-                    // Le thread s'est termine sans emettre Done/Error.
+                    // Le thread s'est termine sans emettre Done/Error (panique) :
+                    // on sort de Running pour ne pas bloquer l'etat indefiniment.
                     self.scp_rx = None;
+                    if matches!(self.scp_state, ScpState::Running { .. }) {
+                        let e = fl!("scp-thread-ended");
+                        self.set_status_message(fl!("scp-failed", error = e.as_str()));
+                        self.scp_state = ScpState::Error(e);
+                    }
                     break;
                 }
             }

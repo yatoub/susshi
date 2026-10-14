@@ -157,8 +157,9 @@ wallix:
   auto_select: true
   fail_if_menu_match_error: true
   selection_timeout_secs: 8
-  # direct: false          # set true to skip menu probe for direct-checkout targets
+  # direct: false          # menu flow only: skip menu probe for direct-checkout targets
   # authorization: ""      # force exact Wallix authorization name (skips menu matching)
+  # authorizations: ["PR-APP_{group}"]  # candidate authorizations, {group} = suffix above
   # header_columns: ["ID", "Cible", "Autorisation"]  # override if bastion uses different column labels
 ```
 
@@ -167,8 +168,9 @@ wallix:
 Wallix-specific fields:
 
 - `template` — login-string template. Default: `{target_user}@%n:SSH:{bastion_user}`.
-- `direct` — skip the menu probe entirely. Use when the authorization is guaranteed.
+- `direct` — skip the menu probe in the menu flow. No effect when an authorization is known (the direct login is used).
 - `authorization` — force the exact Wallix authorization name. Skips menu matching when set.
+- `authorizations` — candidate authorization names, in order of preference; `{group}` is replaced by `group`. A single candidate enables the direct login (no menu); several are tried in order. See [Wallix Guide](wallix.md#declaring-authorizations-recommended).
 - `header_columns` — list of tokens used to detect the menu header row. Override if your bastion uses localized or custom column names.
 
 ### Tunnels
@@ -183,7 +185,7 @@ tunnels:
     label: "PostgreSQL"     # optional — auto-generated if absent
 ```
 
-Not available in `wallix` mode.
+In `wallix` mode, tunnels require a known Wallix authorization — see [Tunnels](tunnels.md).
 
 ### Tags
 
