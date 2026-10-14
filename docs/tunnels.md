@@ -32,7 +32,7 @@ Fields:
 | `remote_port` | Yes | Port on the remote side |
 | `label` | No | Display name shown in the TUI tunnel list |
 
-> **Note:** Tunnels are not available in `wallix` mode — the bastion does not allow arbitrary port forwarding.
+> **Wallix mode:** tunnels require the server's Wallix authorization to be known from the configuration (`wallix.authorization`, or a single entry in `wallix.authorizations`, see [Wallix Guide](wallix.md#declaring-authorizations-recommended)); without it, Wallix shows its selection menu, which a background tunnel cannot answer. susshi runs `ssh -A -T -L <local_port>:<server FQDN>:<remote_port> -l user@target+SSH+AUTHORIZATION+bastion_user bastion` and keeps the remote shell session open in the background: Wallix closes the connection when port forwarding is requested outside an open session on the target, so `-N` cannot be used. A local `remote_host` (`127.0.0.1`, `localhost`, `::1`) is replaced by the server FQDN, as documented by the bastion. If the bastion refuses the tunnel, its message is shown in the tunnel status.
 
 ## `keep_open`
 

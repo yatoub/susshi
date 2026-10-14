@@ -140,10 +140,10 @@ validation-title = ⚠  Avertissements de configuration
 validation-unknown-field = { $file } ({ $context }): champ inconnu « { $field } »
 
 # ── Tunnels SSH ───────────────────────────────────────────────────────────────
-tunnel-wallix-unavailable = Tunnels SSH non disponibles en mode Wallix
 tunnel-not-found = Tunnel #{ $index } introuvable pour ce serveur
 tunnel-already-active = Tunnel « { $label } » déjà actif (port { $port })
 tunnel-started = Tunnel « { $label } » démarré sur le port { $port }
+tunnel-wallix-unavailable = Tunnels Wallix : déclarez l'autorisation du serveur (wallix.authorizations)
 tunnel-error = Erreur tunnel : { $error }
 tunnel-stopped = Tunnel « { $label } » (port { $port }) arrêté
 tunnel-died = Tunnel « { $label } » (port { $port }) s'est arrêté : { $reason }

@@ -220,8 +220,22 @@ fn active_tunnel_count_no_tunnels() {
 
 // ── open / close tunnel overlay ─────────────────────────────────────────────
 
+/// Wallix avec autorisation connue par la config → tunnels disponibles.
 #[test]
-fn open_tunnel_overlay_wallix_mode_no_op() {
+fn open_tunnel_overlay_wallix_with_authorization_opens() {
+    let mut app = make_app_with_server();
+    app.connection_mode = ConnectionMode::Wallix;
+    for s in app.resolved_servers.iter_mut() {
+        s.wallix_authorizations = vec!["PR-APP_admins".to_string()];
+    }
+    app.items_dirty = true; // reconstruit les items visibles depuis resolved_servers
+    app.open_tunnel_overlay();
+    assert!(app.tunnel_overlay.is_some());
+}
+
+/// Wallix sans autorisation connue → menu Wallix requis, tunnels indisponibles.
+#[test]
+fn open_tunnel_overlay_wallix_without_authorization_no_op() {
     let mut app = make_app_with_server();
     app.connection_mode = ConnectionMode::Wallix;
     app.open_tunnel_overlay();

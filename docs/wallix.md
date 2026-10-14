@@ -122,6 +122,8 @@ When exactly **one** authorization is known from the configuration, susshi conne
 
 An entry containing `{group}` is ignored when no `wallix.group` is resolved.
 
+A known authorization also enables [SSH tunnels](tunnels.md) through the bastion (direct login, background shell session).
+
 ## Forcing a Specific Authorization
 
 When a target has multiple Wallix authorizations (different groups), set `wallix.authorization` to the exact authorization name shown in the Wallix menu:
