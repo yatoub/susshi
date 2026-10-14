@@ -151,6 +151,7 @@ tunnel-deleted = Tunnel supprimé
 tunnel-updated = Tunnel mis à jour
 tunnel-added = Tunnel ajouté
 tunnel-overlay-new = + (nouveau tunnel)
+tunnel-overlay-wallix-note = ⚠ Via bastion : ce type de session n'est pas forcément activé par défaut sur tous les environnements. Pour l'utiliser, faites-en la demande à l'administrateur du bastion.
 tunnel-overlay-hints1 =   ↑↓ naviguer   Enter démarrer/arrêter   Del supprimer
 tunnel-overlay-hints2 =   e éditer      a ajouter                q/Esc fermer
 tunnel-form-edit-title = Modifier le tunnel — { $server }
