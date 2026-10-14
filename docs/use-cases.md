@@ -81,29 +81,32 @@ jump:
 
 ## Wallix bastion
 
-For teams using a Wallix bastion, susshi handles the auth menu interactively.
+For teams using a Wallix bastion, declare the authorizations per environment: susshi then connects directly to the target, and SCP and tunnels go through the bastion too.
 
 ```yaml
 defaults:
-  user: "ops@domain"
+  user: "ops"
+  ssh_key: "~/.ssh/wallix_key"
+  mode: "wallix"
+  wallix:
+    host: "wallix.corp.internal"
+    user: "ops"
+    group: "ops-admins"                 # shared authorization suffix
 
 groups:
-  - name: "Wallix Production"
-    wallix:
-      host: "wallix.corp.internal"
-      port: 22
-      user: "ops@domain"
-      ssh_key: "~/.ssh/wallix_key"
-    servers:
-      - name: "prod-web-01"
-        host: "prod-web-01"
-        mode: "wallix"
-      - name: "prod-db-01"
-        host: "prod-db-01"
-        mode: "wallix"
+  - name: "SHOP"
+    environments:
+      - name: "PR"
+        wallix:
+          authorizations: ["PR-SHOP_{group}"]   # → PR-SHOP_ops-admins
+        servers:
+          - name: "web-01"
+            host: "pr-web-01.shop.corp.internal"
+          - name: "db-01"
+            host: "pr-db-01.shop.corp.internal"
 ```
 
-susshi connects to the bastion, presents its interactive target menu, and you select the final destination. See [Wallix bastion](wallix.md) for advanced configuration including `header_columns` customization.
+Without a declared authorization, susshi falls back to the Wallix menu and selects the matching entry. See [Wallix bastion](wallix.md) for the resolution order, the menu flow and troubleshooting.
 
 ---
 

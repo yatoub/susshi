@@ -91,14 +91,18 @@ defaults:
     auto_select: true
     fail_if_menu_match_error: true
     selection_timeout_secs: 8
-    # Set to true when the target server always connects directly through Wallix
-    # without presenting a selection menu. Skips the menu probe and connects
-    # instantly — eliminates the ~5 s delay for direct-checkout targets.
-    # direct: true
-    # Exact Wallix authorization name (e.g. "STI-ANSCORE_ces3s-admins").
-    # When set, takes priority over `group` and is passed verbatim in the login
-    # string. Use with direct: true for instant zero-delay connections.
+    # Candidate Wallix authorizations, in order of preference (inherited:
+    # defaults → group → environment → server). `{group}` is replaced by the
+    # `group` value above. With a single known authorization, susshi connects
+    # directly (`user@target+SSH+AUTH+bastion_user`, no menu) and enables SCP
+    # and tunnels through the bastion. Usually declared per environment.
+    # authorizations: ["PR-APP_{group}"]
+    # Exact Wallix authorization name, highest priority (no `{group}`
+    # replacement). Use for an authorization outside the shared suffix.
     # authorization: "PREFIX_group-name"
+    # Menu flow only: skip the menu probe for targets that Wallix always
+    # connects directly. No effect when an authorization is known.
+    # direct: true
   # Single jump host
   jump:
     - host: "jump.example.com"
@@ -150,8 +154,10 @@ defaults:
   # Semantics: REPLACE — a tunnels list defined at a lower level (group,
   # environment, server) fully replaces the one inherited from above.
   #
-  # Restriction: tunnels are NOT available in `wallix` mode (the bastion
-  # does not allow arbitrary port forwarding).
+  # Wallix mode: requires a known authorization (see `wallix.authorizations`);
+  # susshi keeps a shell session open (`-T` instead of `-N`) and a local
+  # remote_host (127.0.0.1/localhost) is replaced by the server FQDN.
+  # Port forwarding must be enabled by the bastion administrator.
   #
   # Each entry produces: ssh -L local_port:remote_host:remote_port -N ...
   #

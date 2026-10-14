@@ -51,7 +51,11 @@ Run `susshi --validate` to check all config files for syntax errors, unknown fie
 
 ### Wallix connection hangs or shows the raw menu
 
-See [docs/wallix.md](wallix.md) for the full troubleshooting guide.
+Declare the server authorization in `wallix.authorizations` so susshi connects directly without the menu. See [docs/wallix.md](wallix.md) for the full troubleshooting guide (`Cible invalide`, `signature algorithm not supported`, tunnels).
+
+### SCP fails or a tunnel stops
+
+The SCP result popup and the tunnel status show the message returned by `ssh`/`scp` (OpenSSH warnings removed). In Wallix mode the SCP error also shows the exact target used, to compare with a manual `scp`.
 
 ### Clipboard copy (`y`) shows a fallback overlay
 

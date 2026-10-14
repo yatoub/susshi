@@ -48,9 +48,9 @@ CI also tests these targets: `x86_64-unknown-linux-musl`, `x86_64-pc-windows-msv
 ### SSH operations
 
 - [ssh/client.rs](src/ssh/client.rs) + [ssh/client/](src/ssh/client/) — builds the `ssh` command, forkpty on Unix, Wallix auth flow, split into `args.rs` (argument building), `connect.rs` (direct/jump connection entry points), `wallix_pty.rs` (interactive Wallix PTY auth flow)
-- [ssh/sftp.rs](src/ssh/sftp.rs) — SCP transfers using ssh2
-- [ssh/tunnel.rs](src/ssh/tunnel.rs) — SSH tunnel lifecycle
-- [wallix/](src/wallix/) — Wallix bastion auth menu parsing and target selection, split into `target.rs` (target/group string building), `menu.rs` (menu text parsing), `select.rs` (entry selection logic)
+- [ssh/sftp.rs](src/ssh/sftp.rs) — SCP transfers using ssh2 (direct/jump); Wallix mode delegates to the system `scp` binary with the direct login
+- [ssh/tunnel.rs](src/ssh/tunnel.rs) — SSH tunnel lifecycle (Wallix: known authorization required, `-T` session kept open)
+- [wallix/](src/wallix/) — Wallix bastion auth menu parsing and target selection, split into `target.rs` (target/group string building, config-declared authorizations, direct login `user@target+SSH+AUTH+bastion_user`), `menu.rs` (menu text parsing), `select.rs` (entry selection logic)
 - [hooks.rs](src/hooks.rs) — pre-connect / post-disconnect shell hooks
 
 ### Supporting modules
