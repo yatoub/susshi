@@ -127,7 +127,7 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v2
 
   msrv:
-    name: MSRV (Rust 1.89)
+    name: MSRV
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [preflight]
