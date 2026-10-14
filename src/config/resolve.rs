@@ -3,7 +3,7 @@ use super::*;
 impl Config {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, ConfigError> {
         let content = std::fs::read_to_string(path)?;
-        let mut config: Config = serde_yaml_ng::from_str(&content)?;
+        let mut config: Config = parse_yaml(&content)?;
         config.sort();
         Ok(config)
     }
@@ -131,7 +131,7 @@ impl Config {
 
         // Lecture du contenu pour la validation ET le parsing.
         let content = std::fs::read_to_string(path)?;
-        let mut config: Config = serde_yaml_ng::from_str(&content)?;
+        let mut config: Config = parse_yaml(&content)?;
         config.sort();
 
         let mut inc_warnings: Vec<IncludeWarning> = Vec::new();
@@ -165,7 +165,7 @@ impl Config {
                         continue;
                     }
                 };
-                let mut sub_config: Config = match serde_yaml_ng::from_str(&content) {
+                let mut sub_config: Config = match parse_yaml(&content) {
                     Ok(c) => c,
                     Err(e) => {
                         inc_warnings.push(IncludeWarning::LoadError {

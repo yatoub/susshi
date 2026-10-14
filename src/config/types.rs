@@ -53,7 +53,7 @@ pub enum ConfigError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
     #[error("YAML parse error: {0}")]
-    Yaml(#[from] serde_yaml_ng::Error),
+    Yaml(#[from] serde_saphyr::Error),
     #[error("Missing configuration for server '{0}': {1}")]
     MissingField(String, String),
     #[error("File too large: '{path}' exceeds {limit} bytes")]

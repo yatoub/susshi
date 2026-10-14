@@ -11,6 +11,24 @@ const MAX_INCLUDE_DEPTH: u32 = 2;
 const MAX_FILE_SIZE_BYTES: u64 = 5 * 1024 * 1024; // 5 MiB
 const HTTP_TIMEOUT_SECS: u64 = 10;
 
+/// Désérialise un document YAML de configuration.
+///
+/// L'heuristique de ratio alias/ancres de `serde_saphyr` est désactivée : les
+/// inventaires réutilisent volontairement quelques ancres des centaines de fois
+/// (`probe_filesystems: *MNT`). Les limites absolues du budget (nombre d'alias,
+/// événements rejoués, octets retenus) restent actives contre l'explosion
+/// d'alias (« billion laughs »).
+pub(crate) fn parse_yaml<'de, T: Deserialize<'de>>(
+    content: &'de str,
+) -> Result<T, serde_saphyr::Error> {
+    let options = serde_saphyr::options! {
+        budget: serde_saphyr::budget! {
+            enforce_alias_anchor_ratio: false,
+        },
+    };
+    serde_saphyr::from_str_with_options(content, options)
+}
+
 #[path = "config/types.rs"]
 mod types;
 pub use types::*;

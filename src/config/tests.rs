@@ -1139,7 +1139,7 @@ fn test_keep_open_absent_defaults_to_none() {
     let yaml = r#"
 groups: []
 "#;
-    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
     assert!(config.defaults.is_none() || config.defaults.unwrap().keep_open.is_none());
 }
 
@@ -1150,7 +1150,7 @@ defaults:
   keep_open: true
 groups: []
 "#;
-    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
     let keep_open = config
         .defaults
         .as_ref()
@@ -1166,7 +1166,7 @@ defaults:
   keep_open: false
 groups: []
 "#;
-    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
     let keep_open = config
         .defaults
         .as_ref()
@@ -2374,7 +2374,7 @@ fn test_git_outdated_dedups_same_repo() {
 // ─── Production flag ──────────────────────────────────────────────────────
 
 fn resolve_yaml(yaml: &str) -> Vec<ResolvedServer> {
-    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
     config.resolve().unwrap()
 }
 
@@ -2575,7 +2575,7 @@ groups:
           - name: apps01
             host: pp-clb-apps01.example.fr
 "#;
-    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
     let resolved = config.resolve().unwrap();
     let pr = resolved.iter().find(|s| s.env_name == "PR").unwrap();
     assert_eq!(
@@ -2602,7 +2602,29 @@ groups:
       - name: s
         host: s.example.fr
 "#;
-    let config: Config = serde_yaml_ng::from_str(yaml).unwrap();
+    let config: Config = serde_saphyr::from_str(yaml).unwrap();
     let resolved = config.resolve().unwrap();
     assert_eq!(resolved[0].wallix_authorizations, vec!["PR-X_admins"]);
+}
+
+/// Réutilisation intensive d'ancres (beaucoup d'alias pour peu d'ancres),
+/// courante dans les inventaires (`probe_filesystems: *MNT`) : ne doit pas
+/// être rejetée par l'heuristique de ratio alias/ancres du parseur.
+#[test]
+fn test_parse_yaml_accepts_heavy_anchor_reuse() {
+    let mut yaml =
+        String::from("definitions:\n  mnt: &MNT [\"/data\"]\ngroups:\n  - name: G\n    servers:\n");
+    for i in 0..300 {
+        yaml.push_str(&format!(
+            "      - name: s{i}\n        host: s{i}.example.fr\n        probe_filesystems: *MNT\n"
+        ));
+    }
+    let config: Config = parse_yaml(&yaml).expect("anchors reused 300 times");
+    let resolved = config.resolve().unwrap();
+    assert_eq!(resolved.len(), 300);
+    assert!(
+        resolved
+            .iter()
+            .all(|s| s.probe_filesystems.contains(&"/data".to_string()))
+    );
 }

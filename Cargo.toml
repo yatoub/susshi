@@ -2,7 +2,7 @@
 name = "susshi"
 version = "0.23.1"
 edition = "2024"
-rust-version = "1.88"
+rust-version = "1.89"
 description = "Terminal SSH manager with YAML inventories, multi-hop jump hosts, Wallix bastion, tunnels, SCP, and Catppuccin TUI"
 license = "MIT"
 repository = "https://github.com/yatoub/susshi"
@@ -35,8 +35,8 @@ serde_json = "1"
 fuzzy-matcher = "0.3"
 shellexpand = "3.1.2"
 thiserror = "2.0.18"
-serde_yaml_ng = "0.10.0"
 ureq = "3"
+serde-saphyr = { version = "2", default-features = false, features = ["deserialize"] }
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.31", features = ["term", "process"] }

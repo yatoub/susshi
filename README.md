@@ -5,7 +5,7 @@
 [![Crates downloads](https://img.shields.io/crates/d/susshi?style=flat-square)](https://crates.io/crates/susshi)
 [![Documentation](https://img.shields.io/badge/docs-yatoub.github.io%2Fsusshi-blue?style=flat-square)](https://yatoub.github.io/susshi/)
 
-[![MSRV](https://img.shields.io/badge/MSRV-1.88-blue?style=flat-square)](Cargo.toml)
+[![MSRV](https://img.shields.io/badge/MSRV-1.89-blue?style=flat-square)](Cargo.toml)
 [![Maintenance](https://img.shields.io/badge/maintenance-active-brightgreen?style=flat-square)](https://github.com/yatoub/susshi)
 [![Security Audit](https://img.shields.io/github/actions/workflow/status/yatoub/susshi/ci.yml?label=Security%20Audit&logo=github&style=flat-square)](https://github.com/yatoub/susshi/actions/workflows/ci.yml)
 [![Top language](https://img.shields.io/github/languages/top/yatoub/susshi?style=flat-square)](https://github.com/yatoub/susshi)

@@ -127,7 +127,7 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v2
 
   msrv:
-    name: MSRV (Rust 1.88)
+    name: MSRV (Rust 1.89)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [preflight]
@@ -140,12 +140,12 @@ jobs:
 
       - name: Install MSRV toolchain
         # Pin the Rust version through the `toolchain` input, not the action
-        # ref: Dependabot reads `@1.88` as an action version and bumps it to a
+        # ref: Dependabot reads `@1.89` as an action version and bumps it to a
         # Rust release that does not exist. Keep in sync with `rust-version`
         # in Cargo.toml.
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.88"
+          toolchain: "1.89"
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
@@ -153,7 +153,7 @@ jobs:
           key: msrv
 
       - name: Check (MSRV)
-        run: cargo +1.88 check --all-targets
+        run: cargo +1.89 check --all-targets
 
   nix:
     name: Nix flake

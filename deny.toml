@@ -4,12 +4,6 @@ targets = []
 [advisories]
 version = 2
 yanked = "deny"
-ignore = [
-    # unsafe-libyaml (pulled in by serde_yaml_ng) is archived upstream and has
-    # no fixed release. "Unmaintained" advisory, not a known vulnerability.
-    # Remove once the YAML parser is migrated to a safe Rust implementation.
-    { id = "RUSTSEC-2024-0449", reason = "unsafe-libyaml unmaintained via serde_yaml_ng; YAML parser migration planned" },
-]
 
 [licenses]
 version = 2
