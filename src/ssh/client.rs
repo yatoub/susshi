@@ -26,14 +26,15 @@ pub(crate) use args::build_wallix_bastion_args;
 
 #[path = "client/wallix_pty.rs"]
 mod wallix_pty;
+#[cfg(all(unix, test))]
+pub(crate) use wallix_pty::{
+    RawModeGuard, contains_wallix_return_selector_prompt, contains_wallix_target_address_prompt,
+    set_winsize,
+};
 #[cfg(unix)]
 pub(crate) use wallix_pty::{
     connect_wallix_via_pty_with_selection, contains_ssh_auth_prompt, contains_wallix_prompt,
     parse_wallix_page_position, setup_askpass_script, spawn_wallix_pty, wallix_connected_directly,
-};
-#[cfg(all(unix, test))]
-pub(crate) use wallix_pty::{
-    contains_wallix_return_selector_prompt, contains_wallix_target_address_prompt,
 };
 
 #[path = "client/connect.rs"]

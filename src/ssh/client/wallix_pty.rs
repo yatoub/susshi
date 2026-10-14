@@ -26,6 +26,49 @@ pub(crate) fn wallix_connected_directly(buffer: &str) -> bool {
         && !lower.contains("type h for")
 }
 
+/// Met le terminal `fd` en mode raw et restaure son état initial au drop.
+///
+/// Pendant le relais PTY de la session Wallix, le terminal local doit être en
+/// raw (comme le fait `ssh`) : sinon la discipline de ligne bufferise la saisie
+/// jusqu'à Entrée et fait son propre écho — Tab, flèches et Ctrl+C n'atteignent
+/// pas le shell distant.
+#[cfg(unix)]
+pub(crate) struct RawModeGuard {
+    fd: std::os::unix::io::RawFd,
+    original: nix::sys::termios::Termios,
+}
+
+#[cfg(unix)]
+impl RawModeGuard {
+    /// Retourne `None` si `fd` n'est pas un terminal (entrée redirigée).
+    pub(crate) fn new(fd: std::os::unix::io::RawFd) -> Option<Self> {
+        use nix::sys::termios::{SetArg, cfmakeraw, tcgetattr, tcsetattr};
+        // Safety : `fd` reste ouvert pendant toute la durée du guard (stdin).
+        let borrowed = unsafe { std::os::unix::io::BorrowedFd::borrow_raw(fd) };
+        let original = tcgetattr(borrowed).ok()?;
+        let mut raw = original.clone();
+        cfmakeraw(&mut raw);
+        tcsetattr(borrowed, SetArg::TCSANOW, &raw).ok()?;
+        Some(Self { fd, original })
+    }
+}
+
+#[cfg(unix)]
+impl Drop for RawModeGuard {
+    fn drop(&mut self) {
+        use nix::sys::termios::{SetArg, tcsetattr};
+        let borrowed = unsafe { std::os::unix::io::BorrowedFd::borrow_raw(self.fd) };
+        let _ = tcsetattr(borrowed, SetArg::TCSANOW, &self.original);
+    }
+}
+
+/// Applique la taille de fenêtre `ws` au PTY `fd` (le noyau envoie SIGWINCH
+/// au processus de premier plan, qui redessine — vim, less, top…).
+#[cfg(unix)]
+pub(crate) fn set_winsize(fd: std::os::unix::io::RawFd, ws: &Winsize) {
+    unsafe { libc::ioctl(fd, libc::TIOCSWINSZ, ws) };
+}
+
 #[cfg(unix)]
 pub(crate) fn current_winsize() -> Option<Winsize> {
     let mut winsize = Winsize {
@@ -169,8 +212,21 @@ pub(crate) fn connect_wallix_via_pty_with_selection(
     let mut auth_prompted = false;
     let master_fd = master_reader.as_raw_fd();
     let stdin_fd = std::io::stdin().as_raw_fd();
+    // Terminal local en raw pendant toute la session, restauré au retour
+    // (y compris sur erreur) par le drop du guard.
+    let _raw_guard = RawModeGuard::new(stdin_fd);
+    let mut last_winsize = current_winsize().map(|w| (w.ws_row, w.ws_col));
 
     loop {
+        // Redimensionnement du terminal local → propagé à la session.
+        if let Some(ws) = current_winsize() {
+            let size = Some((ws.ws_row, ws.ws_col));
+            if size != last_winsize {
+                set_winsize(master_fd, &ws);
+                last_winsize = size;
+            }
+        }
+
         let mut pollfds = [
             libc::pollfd {
                 fd: master_fd,
@@ -301,7 +357,7 @@ pub(crate) fn connect_wallix_via_pty_with_selection(
             let mut buf = [0_u8; 4096];
             let read = stdin.read(&mut buf)?;
             if read == 0 {
-                // En mode canonique, Ctrl+D peut se traduire par EOF local (read=0).
+                // Entrée non-terminal (pas de mode raw) : EOF local (read=0).
                 // On relaie explicitement un EOT vers la session distante pour
                 // reproduire le comportement attendu d'un shell interactif.
                 master_writer.write_all(&[0x04])?;
