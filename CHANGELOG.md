@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.24.0] — 2026-10-14
+
+### Added
+
+- SCP, tunnels and config-declared authorizations for Wallix bastion ([#220](https://github.com/yatoub/susshi/pull/220))
+
+
 ## [0.23.1] — 2026-10-01
 
 ### Fixed
