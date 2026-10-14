@@ -803,6 +803,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#how-transfers-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Transfers Run
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How Transfers Run">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wallix-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wallix mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#notes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1082,6 +1110,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#how-transfers-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How Transfers Run
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How Transfers Run">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#wallix-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wallix mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#notes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1113,9 +1169,27 @@
 
 
 <h1 id="scp-file-transfers">SCP File Transfers<a class="headerlink" href="#scp-file-transfers" title="Permanent link">&para;</a></h1>
-<p>susshi provides an in-TUI form for uploading and downloading files via SCP.</p>
+<p>susshi provides an in-TUI form for uploading and downloading files to the selected server.</p>
 <h2 id="opening-the-scp-form">Opening the SCP Form<a class="headerlink" href="#opening-the-scp-form" title="Permanent link">&para;</a></h2>
-<p>Press <code>s</code> when a server is selected to open the SCP transfer form.</p>
+<p>Press <code>s</code> when a server is selected, then choose the direction:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>↑</code> / <code>u</code></td>
+<td>Upload (local → server)</td>
+</tr>
+<tr>
+<td><code>↓</code> / <code>d</code></td>
+<td>Download (server → local)</td>
+</tr>
+</tbody>
+</table>
 <h2 id="form-fields">Form Fields<a class="headerlink" href="#form-fields" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1126,23 +1200,60 @@
 </thead>
 <tbody>
 <tr>
-<td>Source</td>
-<td>Local path (upload) or <code>user@host:/remote/path</code> (download)</td>
+<td>Local</td>
+<td>Local file (upload) or destination path (download)</td>
 </tr>
 <tr>
-<td>Destination</td>
-<td>Remote path (upload) or local path (download)</td>
+<td>Remote</td>
+<td>Remote destination (upload) or remote file (download) — pre-filled with <code>user@host:~</code></td>
 </tr>
 </tbody>
 </table>
-<p>The form pre-fills the remote side with <code>user@host:</code> based on the selected server.</p>
+<p><code>Tab</code> switches field, <code>Enter</code> starts the transfer, <code>Esc</code> cancels.</p>
+<p>Remote paths:</p>
+<ul>
+<li><code>~</code> and <code>~/…</code> are relative to the remote home directory.</li>
+<li>A path ending with <code>/</code> is treated as a directory: the local file name is appended.</li>
+</ul>
 <h2 id="transfer-progress">Transfer Progress<a class="headerlink" href="#transfer-progress" title="Permanent link">&para;</a></h2>
-<p>Transfer output is captured through a PTY-backed OpenSSH invocation and displayed live in the overlay. The progress line updates as data is transferred.</p>
-<p>Dismiss with <code>Esc</code> once the transfer is complete, or press <code>Esc</code> to cancel an in-progress transfer.</p>
+<p>The transfer runs in the background: a progress bar with the transferred size and ETA is shown in the status panel while you keep using the TUI. When it ends, a result popup shows the outcome (long error messages wrap); close it with <code>Enter</code> or <code>Esc</code>.</p>
+<h2 id="how-transfers-run">How Transfers Run<a class="headerlink" href="#how-transfers-run" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Engine</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direct</td>
+<td>Native SFTP/SCP over libssh2 (agent, <code>ssh_key</code>, then default keys)</td>
+</tr>
+<tr>
+<td>Jump</td>
+<td>Native, through the first jump host (<code>direct-tcpip</code> channel)</td>
+</tr>
+<tr>
+<td>Wallix</td>
+<td>System <code>scp</code> binary, see below</td>
+</tr>
+</tbody>
+</table>
+<p>After an upload, susshi checks the server acknowledgement: a remote write error (permission denied, full disk…) is reported instead of a false success.</p>
+<h3 id="wallix-mode">Wallix mode<a class="headerlink" href="#wallix-mode" title="Permanent link">&para;</a></h3>
+<p>susshi runs the system <code>scp</code> with the direct Wallix login:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>scp<span class="w"> </span>-A<span class="w"> </span>…<span class="w"> </span>user@target+SSH+AUTHORIZATION+bastion_user@bastion:path
+</code></pre></div>
+<ul>
+<li>Authorizations come from the configuration (<code>wallix.authorization</code>, then <code>wallix.authorizations</code>), tried in order while Wallix answers <code>Cible invalide</code>; the name derived from the YAML structure (<code>&lt;ENV&gt;-&lt;GROUP&gt;_&lt;group&gt;</code>) is only a last resort. See <a href="../wallix/#declaring-authorizations-recommended">Wallix Guide</a>.</li>
+<li>Agent forwarding (<code>-A</code>) lets the bastion authenticate on the target with your SSH agent: your key must be loaded in the agent (<code>ssh-add -l</code>). No password prompt is possible (<code>BatchMode</code>).</li>
+<li>Progress is only reported when the transfer ends.</li>
+<li>On failure, the error shows the <code>scp</code> message (without OpenSSH warnings) and the exact target used, to compare with a manual <code>scp</code>.</li>
+</ul>
 <h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
 <ul>
-<li>The transfer uses the same SSH parameters as the selected server (key, port, jump, agent socket).</li>
-<li>Wallix mode is not supported for SCP — the bastion does not allow arbitrary file transfers.</li>
+<li>The transfer uses the same SSH parameters as the selected server (key, port, jump, agent socket, <code>ssh_options</code> in Wallix mode).</li>
 <li>For large or automated transfers, use <code>rsync</code> or <code>scp</code> directly with the SSH command copied via <code>y</code>.</li>
 </ul>
 

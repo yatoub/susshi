@@ -1163,7 +1163,7 @@
 </tbody>
 </table>
 <blockquote>
-<p><strong>Note:</strong> Tunnels are not available in <code>wallix</code> mode — the bastion does not allow arbitrary port forwarding.</p>
+<p><strong>Wallix mode:</strong> tunnels require the server's Wallix authorization to be known from the configuration (<code>wallix.authorization</code>, or a single entry in <code>wallix.authorizations</code>, see <a href="../wallix/#declaring-authorizations-recommended">Wallix Guide</a>); without it, Wallix shows its selection menu, which a background tunnel cannot answer. susshi runs <code>ssh -A -T -L &lt;local_port&gt;:&lt;server FQDN&gt;:&lt;remote_port&gt; -l user@target+SSH+AUTHORIZATION+bastion_user bastion</code> and keeps the remote shell session open in the background: Wallix closes the connection when port forwarding is requested outside an open session on the target, so <code>-N</code> cannot be used. A local <code>remote_host</code> (<code>127.0.0.1</code>, <code>localhost</code>, <code>::1</code>) is replaced by the server FQDN, as documented by the bastion. If the bastion refuses the tunnel, its message is shown in the tunnel status. Port forwarding through the bastion is not necessarily enabled by default on every environment: ask the bastion administrator to enable it if needed (the TUI tunnel list shows this reminder in Wallix mode).</p>
 </blockquote>
 <h2 id="keep_open"><code>keep_open</code><a class="headerlink" href="#keep_open" title="Permanent link">&para;</a></h2>
 <p>Set <code>keep_open: true</code> at any config level to automatically reopen the TUI after a connection closes. Useful when you want to run a tunnel, disconnect, and immediately pick another server.</p>

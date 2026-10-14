@@ -1017,6 +1017,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#scp-fails-or-a-tunnel-stops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SCP fails or a tunnel stops
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#clipboard-copy-y-shows-a-fallback-overlay" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1194,6 +1205,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#scp-fails-or-a-tunnel-stops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SCP fails or a tunnel stops
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#clipboard-copy-y-shows-a-fallback-overlay" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1315,7 +1337,9 @@
 <h3 id="config-file-not-loading">Config file not loading<a class="headerlink" href="#config-file-not-loading" title="Permanent link">&para;</a></h3>
 <p>Run <code>susshi --validate</code> to check all config files for syntax errors, unknown fields, and unresolved includes. Errors and warnings are printed with file names and line numbers.</p>
 <h3 id="wallix-connection-hangs-or-shows-the-raw-menu">Wallix connection hangs or shows the raw menu<a class="headerlink" href="#wallix-connection-hangs-or-shows-the-raw-menu" title="Permanent link">&para;</a></h3>
-<p>See <a href="../wallix/">docs/wallix.md</a> for the full troubleshooting guide.</p>
+<p>Declare the server authorization in <code>wallix.authorizations</code> so susshi connects directly without the menu. See <a href="../wallix/">docs/wallix.md</a> for the full troubleshooting guide (<code>Cible invalide</code>, <code>signature algorithm not supported</code>, tunnels).</p>
+<h3 id="scp-fails-or-a-tunnel-stops">SCP fails or a tunnel stops<a class="headerlink" href="#scp-fails-or-a-tunnel-stops" title="Permanent link">&para;</a></h3>
+<p>The SCP result popup and the tunnel status show the message returned by <code>ssh</code>/<code>scp</code> (OpenSSH warnings removed). In Wallix mode the SCP error also shows the exact target used, to compare with a manual <code>scp</code>.</p>
 <h3 id="clipboard-copy-y-shows-a-fallback-overlay">Clipboard copy (<code>y</code>) shows a fallback overlay<a class="headerlink" href="#clipboard-copy-y-shows-a-fallback-overlay" title="Permanent link">&para;</a></h3>
 <p>The clipboard backend is unavailable. Install the required tool for your environment:</p>
 <ul>

@@ -1820,16 +1820,18 @@
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">auto_select</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">fail_if_menu_match_error</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">  </span><span class="nt">selection_timeout_secs</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8</span>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="c1"># direct: false          # set true to skip menu probe for direct-checkout targets</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="c1"># direct: false          # menu flow only: skip menu probe for direct-checkout targets</span>
 <a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span><span class="c1"># authorization: ""      # force exact Wallix authorization name (skips menu matching)</span>
-<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">  </span><span class="c1"># header_columns: ["ID", "Cible", "Autorisation"]  # override if bastion uses different column labels</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">  </span><span class="c1"># authorizations: ["PR-APP_{group}"]  # candidate authorizations, {group} = suffix above</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">  </span><span class="c1"># header_columns: ["ID", "Cible", "Autorisation"]  # override if bastion uses different column labels</span>
 </code></pre></div>
 <p><code>bastion</code> is accepted as a backward-compatible alias key.</p>
 <p>Wallix-specific fields:</p>
 <ul>
 <li><code>template</code> — login-string template. Default: <code>{target_user}@%n:SSH:{bastion_user}</code>.</li>
-<li><code>direct</code> — skip the menu probe entirely. Use when the authorization is guaranteed.</li>
+<li><code>direct</code> — skip the menu probe in the menu flow. No effect when an authorization is known (the direct login is used).</li>
 <li><code>authorization</code> — force the exact Wallix authorization name. Skips menu matching when set.</li>
+<li><code>authorizations</code> — candidate authorization names, in order of preference; <code>{group}</code> is replaced by <code>group</code>. A single candidate enables the direct login (no menu); several are tried in order. See <a href="../wallix/#declaring-authorizations-recommended">Wallix Guide</a>.</li>
 <li><code>header_columns</code> — list of tokens used to detect the menu header row. Override if your bastion uses localized or custom column names.</li>
 </ul>
 <h3 id="tunnels">Tunnels<a class="headerlink" href="#tunnels" title="Permanent link">&para;</a></h3>
@@ -1840,7 +1842,7 @@
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nt">remote_port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5432</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="s">"PostgreSQL"</span><span class="w">     </span><span class="c1"># optional — auto-generated if absent</span>
 </code></pre></div>
-<p>Not available in <code>wallix</code> mode.</p>
+<p>In <code>wallix</code> mode, tunnels require a known Wallix authorization — see <a href="../tunnels/">Tunnels</a>.</p>
 <h3 id="tags">Tags<a class="headerlink" href="#tags" title="Permanent link">&para;</a></h3>
 <p>Tags use <strong>UNION</strong> semantics: every level (defaults → group → env → server) appends its tags to the accumulated set. Duplicates are removed (first occurrence wins).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">defaults</span><span class="p">:</span>
