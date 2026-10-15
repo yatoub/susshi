@@ -1,7 +1,8 @@
 use super::*;
 
 impl App {
-    /// Lance une commande SSH non-interactive dans un thread dedie.
+    /// Lance une commande SSH non-interactive dans un thread dedie, selon le
+    /// mode de connexion courant (Direct, Jump ou Wallix).
     /// Stocke le resultat via `cmd_rx`.
     pub fn start_cmd(&mut self, server: &ResolvedServer, cmd: String) {
         if self.cmd_history.last().map(|s| s.as_str()) != Some(cmd.as_str()) {
@@ -9,52 +10,24 @@ impl App {
         }
         self.cmd_history_cursor = None;
 
-        let host = server.host.clone();
-        let user = server.user.clone();
-        let port = server.port;
-        let key = server.ssh_key.clone();
-        let cmd_clone = cmd.clone();
+        let server = server.clone();
+        let mode = self.connection_mode;
 
         let (tx, rx) = mpsc::channel();
         self.cmd_state = CmdState::Running(cmd.clone());
         self.cmd_rx = Some(rx);
 
         std::thread::spawn(move || {
-            let mut args = vec![
-                "-o".to_string(),
-                "BatchMode=yes".to_string(),
-                "-o".to_string(),
-                "ConnectTimeout=10".to_string(),
-                "-p".to_string(),
-                port.to_string(),
-            ];
-            if !key.is_empty() {
-                let expanded = shellexpand::tilde(&key).to_string();
-                args.push("-i".to_string());
-                args.push(expanded);
-            }
-            args.push(format!("{}@{}", user, host));
-            args.push(cmd_clone.clone());
-
-            let result = std::process::Command::new("ssh").args(&args).output();
-
-            match result {
-                Ok(out) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-                    let combined = if stderr.is_empty() {
-                        stdout
-                    } else if stdout.is_empty() {
-                        stderr
-                    } else {
-                        format!("{}\n---\n{}", stdout, stderr)
-                    };
-                    let _ = tx.send((combined, out.status.success()));
-                }
-                Err(e) => {
-                    let _ = tx.send((e.to_string(), false));
-                }
-            }
+            let result = match crate::ssh::exec::run_remote(
+                &server,
+                mode,
+                &cmd,
+                crate::ssh::exec::COMMAND_TIMEOUT,
+            ) {
+                Ok(out) => (format_cmd_output(&out), out.success),
+                Err(e) => (e.to_string(), false),
+            };
+            let _ = tx.send(result);
         });
     }
 
@@ -84,5 +57,17 @@ impl App {
         self.cmd_state = CmdState::Idle;
         self.cmd_rx = None;
         self.cmd_history_cursor = None;
+    }
+}
+
+/// Fusionne stdout et stderr pour l'affichage, separes par `---` si les deux
+/// sont presents.
+pub(crate) fn format_cmd_output(out: &crate::ssh::exec::ExecOutput) -> String {
+    if out.stderr.is_empty() {
+        out.stdout.clone()
+    } else if out.stdout.is_empty() {
+        out.stderr.clone()
+    } else {
+        format!("{}\n---\n{}", out.stdout, out.stderr)
     }
 }

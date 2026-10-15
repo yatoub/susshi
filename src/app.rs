@@ -30,6 +30,8 @@ mod favorites;
 
 #[path = "app/command.rs"]
 mod command;
+#[cfg(test)]
+use command::format_cmd_output;
 
 #[path = "app/wallix_state.rs"]
 mod wallix_state;

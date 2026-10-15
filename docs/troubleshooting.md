@@ -13,7 +13,7 @@ The overlay displays:
 - Disk usage bars for `/` and any extra paths in `probe_filesystems`
 - A ⚠ warning for any configured filesystem that is not mounted
 
-The probe uses the current connection mode (Direct/Jump) — Wallix is not supported.
+The probe uses the current connection mode (Direct, Jump or Wallix). In Wallix mode it goes through the direct login, like SCP — see [wallix.md](wallix.md#commands-and-diagnostics).
 
 ## Verbose Mode
 

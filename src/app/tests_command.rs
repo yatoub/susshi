@@ -142,3 +142,28 @@ fn poll_cmd_receives_failure_result() {
         panic!("Expected Done state");
     }
 }
+
+// ── format_cmd_output ────────────────────────────────────────────────────────
+
+fn exec_out(stdout: &str, stderr: &str) -> crate::ssh::exec::ExecOutput {
+    crate::ssh::exec::ExecOutput {
+        stdout: stdout.into(),
+        stderr: stderr.into(),
+        success: true,
+    }
+}
+
+#[test]
+fn format_cmd_output_stdout_only() {
+    assert_eq!(format_cmd_output(&exec_out("a\n", "")), "a\n");
+}
+
+#[test]
+fn format_cmd_output_stderr_only() {
+    assert_eq!(format_cmd_output(&exec_out("", "err\n")), "err\n");
+}
+
+#[test]
+fn format_cmd_output_both_separated() {
+    assert_eq!(format_cmd_output(&exec_out("a", "err")), "a\n---\nerr");
+}

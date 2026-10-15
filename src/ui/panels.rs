@@ -7,10 +7,12 @@ use ratatui::{
 };
 
 use crate::app::{App, CmdState, ConfigItem, ScpState};
+use crate::config::ConnectionMode;
 use crate::fl;
-use crate::probe::{ProbeProfile, ProbeState};
+use crate::probe::ProbeState;
 use crate::ssh::sftp::ScpDirection;
 use crate::ui::theme::Theme;
+use crate::wallix::{AuthorizationDisplay, authorization_display};
 
 pub(crate) fn draw_connection_mode_area(f: &mut Frame, app: &App, area: Rect) {
     let chunks = Layout::default()
@@ -398,7 +400,12 @@ pub(crate) fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
                     ]),
                 ]);
 
-                if let Some(jump) = &server.jump_host {
+                // Rebond / Wallix : affichés seulement pour le mode sélectionné.
+                if let Some(jump) = server
+                    .jump_host
+                    .as_ref()
+                    .filter(|_| app.connection_mode == ConnectionMode::Jump)
+                {
                     lines.push(Line::from(vec![
                         Span::styled(
                             fl!("label-jump"),
@@ -410,7 +417,11 @@ pub(crate) fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
                     ]));
                 }
 
-                if let Some(bhost) = &server.bastion_host {
+                if let Some(bhost) = server
+                    .bastion_host
+                    .as_ref()
+                    .filter(|_| app.connection_mode == ConnectionMode::Wallix)
+                {
                     let bastion_display = match &server.bastion_user {
                         Some(u) => format!("{}@{}", u, bhost),
                         None => bhost.clone(),
@@ -424,6 +435,29 @@ pub(crate) fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
                         ),
                         Span::raw(" "),
                         Span::styled(bastion_display, Style::default().fg(app.theme.sky)),
+                    ]));
+
+                    let (value, color) = match authorization_display(server) {
+                        AuthorizationDisplay::Configured(auths) => {
+                            (auths.join(", "), app.theme.sky)
+                        }
+                        AuthorizationDisplay::Derived(auth) => (
+                            format!("{auth} {}", fl!("wallix-authorization-derived")),
+                            app.theme.subtext0,
+                        ),
+                        AuthorizationDisplay::Menu => {
+                            (fl!("wallix-authorization-menu"), app.theme.yellow)
+                        }
+                    };
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            fl!("label-wallix-authorization"),
+                            Style::default()
+                                .add_modifier(Modifier::BOLD)
+                                .fg(app.theme.fg),
+                        ),
+                        Span::raw(" "),
+                        Span::styled(value, Style::default().fg(color)),
                     ]));
                 }
 
@@ -721,120 +755,99 @@ pub(crate) fn draw_details(f: &mut Frame, app: &mut App, area: Rect) {
                                 fl!("probe-section"),
                                 Style::default().fg(theme.border),
                             )]));
-                            if r.profile == ProbeProfile::Wallix {
-                                for note in &r.notes {
-                                    let style =
-                                        if note.contains("error") || note.contains("<missing>") {
-                                            Style::default().fg(theme.red)
-                                        } else if note.contains("skipped") {
-                                            Style::default().fg(theme.yellow)
-                                        } else if note.contains("ok") {
-                                            Style::default().fg(theme.green)
-                                        } else {
-                                            Style::default().fg(theme.fg)
-                                        };
-                                    lines.push(Line::from(vec![Span::styled(
-                                        format!("  {}", note),
-                                        style,
-                                    )]));
-                                }
-                            } else {
+                            lines.push(Line::from(vec![
+                                Span::styled(
+                                    fl!("probe-kernel"),
+                                    Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
+                                ),
+                                Span::raw(r.kernel.clone()),
+                            ]));
+                            lines.push(Line::from(vec![
+                                Span::styled(
+                                    fl!("probe-os"),
+                                    Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
+                                ),
+                                Span::raw(r.os_name.clone()),
+                            ]));
+                            lines.push(Line::from(vec![
+                                Span::styled(
+                                    fl!("probe-cpu"),
+                                    Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
+                                ),
+                                Span::raw(r.cpu_model.clone()),
+                            ]));
+                            lines.push(Line::from(vec![
+                                Span::styled(
+                                    fl!("probe-cpu-cores"),
+                                    Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
+                                ),
+                                Span::raw(r.cpu_cores.to_string()),
+                            ]));
+                            lines.push(Line::from(vec![
+                                Span::styled(
+                                    fl!("probe-load"),
+                                    Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
+                                ),
+                                Span::raw(r.load.clone()),
+                            ]));
+                            lines.push(probe_bar(
+                                &fl!("probe-ram"),
+                                r.ram_pct,
+                                r.ram_total_gb,
+                                theme,
+                            ));
+                            lines.push(probe_bar(
+                                &fl!("probe-disk"),
+                                r.disk_pct,
+                                r.disk_total_gb,
+                                theme,
+                            ));
+                            if server.control_master {
+                                let (cm_icon, cm_label, cm_style) = if r.control_master_active {
+                                    (
+                                        "⬡ ",
+                                        fl!("probe-cm-active"),
+                                        Style::default().fg(theme.green),
+                                    )
+                                } else {
+                                    (
+                                        "⬡ ",
+                                        fl!("probe-cm-inactive"),
+                                        Style::default().fg(theme.subtext0),
+                                    )
+                                };
                                 lines.push(Line::from(vec![
                                     Span::styled(
-                                        fl!("probe-kernel"),
+                                        fl!("probe-cm-label"),
                                         Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
                                     ),
-                                    Span::raw(r.kernel.clone()),
+                                    Span::styled(format!("{}{}", cm_icon, cm_label), cm_style),
                                 ]));
-                                lines.push(Line::from(vec![
-                                    Span::styled(
-                                        fl!("probe-os"),
-                                        Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
-                                    ),
-                                    Span::raw(r.os_name.clone()),
-                                ]));
-                                lines.push(Line::from(vec![
-                                    Span::styled(
-                                        fl!("probe-cpu"),
-                                        Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
-                                    ),
-                                    Span::raw(r.cpu_model.clone()),
-                                ]));
-                                lines.push(Line::from(vec![
-                                    Span::styled(
-                                        fl!("probe-cpu-cores"),
-                                        Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
-                                    ),
-                                    Span::raw(r.cpu_cores.to_string()),
-                                ]));
-                                lines.push(Line::from(vec![
-                                    Span::styled(
-                                        fl!("probe-load"),
-                                        Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
-                                    ),
-                                    Span::raw(r.load.clone()),
-                                ]));
-                                lines.push(probe_bar(
-                                    &fl!("probe-ram"),
-                                    r.ram_pct,
-                                    r.ram_total_gb,
-                                    theme,
-                                ));
-                                lines.push(probe_bar(
-                                    &fl!("probe-disk"),
-                                    r.disk_pct,
-                                    r.disk_total_gb,
-                                    theme,
-                                ));
-                                if server.control_master {
-                                    let (cm_icon, cm_label, cm_style) = if r.control_master_active {
-                                        (
-                                            "⬡ ",
-                                            fl!("probe-cm-active"),
-                                            Style::default().fg(theme.green),
-                                        )
-                                    } else {
-                                        (
-                                            "⬡ ",
-                                            fl!("probe-cm-inactive"),
-                                            Style::default().fg(theme.subtext0),
-                                        )
-                                    };
-                                    lines.push(Line::from(vec![
-                                        Span::styled(
-                                            fl!("probe-cm-label"),
-                                            Style::default()
-                                                .add_modifier(Modifier::BOLD)
-                                                .fg(theme.fg),
-                                        ),
-                                        Span::styled(format!("{}{}", cm_icon, cm_label), cm_style),
-                                    ]));
-                                }
-                                for fs_entry in &r.extra_fs {
-                                    match &fs_entry.usage {
-                                        Some(usage) => {
-                                            let label = fl!(
-                                                "probe-disk-extra",
+                            }
+                            for fs_entry in &r.extra_fs {
+                                match &fs_entry.usage {
+                                    Some(usage) => {
+                                        let label = fl!(
+                                            "probe-disk-extra",
+                                            mount = fs_entry.mountpoint.as_str()
+                                        );
+                                        lines.push(probe_bar(
+                                            &label,
+                                            usage.pct,
+                                            usage.total_gb,
+                                            theme,
+                                        ));
+                                    }
+                                    None => {
+                                        lines.push(Line::from(vec![Span::styled(
+                                            fl!(
+                                                "probe-fs-absent",
                                                 mount = fs_entry.mountpoint.as_str()
-                                            );
-                                            lines.push(probe_bar(
-                                                &label,
-                                                usage.pct,
-                                                usage.total_gb,
-                                                theme,
-                                            ));
-                                        }
-                                        None => {
-                                            lines.push(Line::from(vec![Span::styled(
-                                                fl!(
-                                                    "probe-fs-absent",
-                                                    mount = fs_entry.mountpoint.as_str()
-                                                ),
-                                                Style::default()
-                                                    .fg(theme.yellow)
-                                                    .add_modifier(Modifier::BOLD),
-                                            )]));
-                                        }
+                                            ),
+                                            Style::default()
+                                                .fg(theme.yellow)
+                                                .add_modifier(Modifier::BOLD),
+                                        )]));
                                     }
                                 }
                             }
@@ -1147,82 +1160,66 @@ pub(crate) fn draw_pinned_server(f: &mut Frame, app: &App, area: Rect) {
                 fl!("probe-section"),
                 Style::default().fg(theme.border),
             )]));
-            if r.profile == ProbeProfile::Wallix {
-                for note in &r.notes {
-                    let style = if note.contains("error") || note.contains("<missing>") {
-                        Style::default().fg(theme.red)
-                    } else if note.contains("skipped") {
-                        Style::default().fg(theme.yellow)
-                    } else if note.contains("ok") {
-                        Style::default().fg(theme.green)
-                    } else {
-                        Style::default().fg(theme.fg)
-                    };
-                    lines.push(Line::from(vec![Span::styled(format!("  {}", note), style)]));
-                }
-            } else {
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        fl!("probe-kernel"),
-                        Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
-                    ),
-                    Span::raw(r.kernel.clone()),
-                ]));
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        fl!("probe-os"),
-                        Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
-                    ),
-                    Span::raw(r.os_name.clone()),
-                ]));
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        fl!("probe-cpu"),
-                        Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
-                    ),
-                    Span::raw(r.cpu_model.clone()),
-                ]));
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        fl!("probe-cpu-cores"),
-                        Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
-                    ),
-                    Span::raw(r.cpu_cores.to_string()),
-                ]));
-                lines.push(Line::from(vec![
-                    Span::styled(
-                        fl!("probe-load"),
-                        Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
-                    ),
-                    Span::raw(r.load.clone()),
-                ]));
-                lines.push(probe_bar(
-                    &fl!("probe-ram"),
-                    r.ram_pct,
-                    r.ram_total_gb,
-                    theme,
-                ));
-                lines.push(probe_bar(
-                    &fl!("probe-disk"),
-                    r.disk_pct,
-                    r.disk_total_gb,
-                    theme,
-                ));
-                for fs_entry in &r.extra_fs {
-                    match &fs_entry.usage {
-                        Some(usage) => {
-                            let label =
-                                fl!("probe-disk-extra", mount = fs_entry.mountpoint.as_str());
-                            lines.push(probe_bar(&label, usage.pct, usage.total_gb, theme));
-                        }
-                        None => {
-                            lines.push(Line::from(vec![Span::styled(
-                                fl!("probe-fs-absent", mount = fs_entry.mountpoint.as_str()),
-                                Style::default()
-                                    .fg(theme.yellow)
-                                    .add_modifier(Modifier::BOLD),
-                            )]));
-                        }
+            lines.push(Line::from(vec![
+                Span::styled(
+                    fl!("probe-kernel"),
+                    Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
+                ),
+                Span::raw(r.kernel.clone()),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled(
+                    fl!("probe-os"),
+                    Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
+                ),
+                Span::raw(r.os_name.clone()),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled(
+                    fl!("probe-cpu"),
+                    Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
+                ),
+                Span::raw(r.cpu_model.clone()),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled(
+                    fl!("probe-cpu-cores"),
+                    Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
+                ),
+                Span::raw(r.cpu_cores.to_string()),
+            ]));
+            lines.push(Line::from(vec![
+                Span::styled(
+                    fl!("probe-load"),
+                    Style::default().add_modifier(Modifier::BOLD).fg(theme.fg),
+                ),
+                Span::raw(r.load.clone()),
+            ]));
+            lines.push(probe_bar(
+                &fl!("probe-ram"),
+                r.ram_pct,
+                r.ram_total_gb,
+                theme,
+            ));
+            lines.push(probe_bar(
+                &fl!("probe-disk"),
+                r.disk_pct,
+                r.disk_total_gb,
+                theme,
+            ));
+            for fs_entry in &r.extra_fs {
+                match &fs_entry.usage {
+                    Some(usage) => {
+                        let label = fl!("probe-disk-extra", mount = fs_entry.mountpoint.as_str());
+                        lines.push(probe_bar(&label, usage.pct, usage.total_gb, theme));
+                    }
+                    None => {
+                        lines.push(Line::from(vec![Span::styled(
+                            fl!("probe-fs-absent", mount = fs_entry.mountpoint.as_str()),
+                            Style::default()
+                                .fg(theme.yellow)
+                                .add_modifier(Modifier::BOLD),
+                        )]));
                     }
                 }
             }

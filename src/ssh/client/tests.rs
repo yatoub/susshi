@@ -508,3 +508,63 @@ fn wallix_several_authorizations_keep_template_login() {
     let l_pos = args.iter().position(|a| a == "-l").expect("-l present");
     assert_eq!(args[l_pos + 1], "admin@198.51.100.1:SSH:buser");
 }
+
+// ── build_wallix_direct_args : login direct pour une autorisation donnée ─────
+
+fn wallix_direct_server() -> ResolvedServer {
+    let mut s = base_server();
+    s.host = "srv01.example.fr".into();
+    s.user = "jdoe".into();
+    s.bastion_host = Some("bastion.example.fr:2222".into());
+    s.bastion_user = Some("jdoe".into());
+    s.ssh_options = vec!["ServerAliveInterval=30".into()];
+    s
+}
+
+#[test]
+fn wallix_direct_args_use_given_authorization() {
+    let args = build_wallix_direct_args(&wallix_direct_server(), Some("PR-APP_admins")).unwrap();
+    let l = args.iter().position(|a| a == "-l").expect("-l");
+    assert_eq!(args[l + 1], "jdoe@srv01.example.fr+SSH+PR-APP_admins+jdoe");
+    assert_eq!(args.last().unwrap(), "bastion.example.fr");
+    let p = args.iter().position(|a| a == "-p").expect("-p");
+    assert_eq!(args[p + 1], "2222");
+}
+
+/// Le bastion s'authentifie sur la cible via l'agent transféré.
+#[test]
+fn wallix_direct_args_forward_agent_once() {
+    let args = build_wallix_direct_args(&wallix_direct_server(), None).unwrap();
+    assert_eq!(args.iter().filter(|a| *a == "-A").count(), 1, "{args:?}");
+    let mut s = wallix_direct_server();
+    s.agent_forwarding = true;
+    let args = build_wallix_direct_args(&s, None).unwrap();
+    assert_eq!(args.iter().filter(|a| *a == "-A").count(), 1, "{args:?}");
+}
+
+#[test]
+fn wallix_direct_args_without_authorization() {
+    let args = build_wallix_direct_args(&wallix_direct_server(), None).unwrap();
+    assert!(
+        args.contains(&"jdoe@srv01.example.fr+SSH+jdoe".to_string()),
+        "{args:?}"
+    );
+}
+
+/// Options communes conservées (ssh_options, -F /dev/null).
+#[test]
+fn wallix_direct_args_keep_common_options() {
+    let args = build_wallix_direct_args(&wallix_direct_server(), None).unwrap();
+    assert!(
+        args.contains(&"ServerAliveInterval=30".to_string()),
+        "{args:?}"
+    );
+    assert!(args.contains(&"/dev/null".to_string()), "{args:?}");
+}
+
+#[test]
+fn wallix_direct_args_require_bastion() {
+    let mut s = wallix_direct_server();
+    s.bastion_host = None;
+    assert!(build_wallix_direct_args(&s, None).is_err());
+}

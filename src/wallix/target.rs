@@ -188,6 +188,54 @@ pub fn build_direct_login(server: &ResolvedServer, authorization: Option<&str>) 
     login
 }
 
+/// Autorisations à essayer, dans l'ordre, quand aucun menu n'est possible
+/// (SCP, commande ad-hoc, probe) : chacune donne un login direct.
+///
+/// 1. Autorisations déclarées en config (`authorization`, puis `authorizations`).
+/// 2. Dernier recours : détection — nom dérivé `<ENV>-<GROUPE>_<group>` (le
+///    candidat le plus qualifié), ou `None` (login sans autorisation).
+pub fn fallback_authorizations(server: &ResolvedServer) -> Vec<Option<String>> {
+    let configured = configured_authorizations(server);
+    if !configured.is_empty() {
+        return configured.into_iter().map(Some).collect();
+    }
+    let detected = build_expected_groups(server)
+        .ok()
+        .and_then(|groups| groups.into_iter().last());
+    vec![detected]
+}
+
+/// Autorisation Wallix affichée dans les détails du serveur.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuthorizationDisplay {
+    /// Déclarée(s) en config, dans l'ordre d'essai.
+    Configured(Vec<String>),
+    /// Déduite de la structure YAML (`<ENV>-<GROUPE>_<group>`).
+    Derived(String),
+    /// Rien de connu : le menu Wallix départage à la connexion.
+    Menu,
+}
+
+/// Autorisation à afficher, selon la même résolution que
+/// [`fallback_authorizations`].
+pub fn authorization_display(server: &ResolvedServer) -> AuthorizationDisplay {
+    let configured = configured_authorizations(server);
+    if !configured.is_empty() {
+        return AuthorizationDisplay::Configured(configured);
+    }
+    match fallback_authorizations(server).pop().flatten() {
+        Some(derived) => AuthorizationDisplay::Derived(derived),
+        None => AuthorizationDisplay::Menu,
+    }
+}
+
+/// Wallix refuse la cible/autorisation demandée (« Cible invalide ») : le
+/// candidat suivant de [`fallback_authorizations`] peut être essayé.
+pub fn is_invalid_target(stderr: &str) -> bool {
+    let lower = stderr.to_lowercase();
+    lower.contains("cible invalide") || lower.contains("invalid target")
+}
+
 /// Autorisations candidates pour la sélection dans le menu Wallix, par ordre
 /// de préférence : celles déclarées en config, puis la détection (suffixe
 /// `group` seul, puis `<ENV>-<GROUPE>_<group>` dérivé de la structure YAML).

@@ -264,31 +264,6 @@ fn open_session(server: &ResolvedServer, mode: ConnectionMode) -> Result<ssh2::S
     }
 }
 
-/// Autorisations à essayer, dans l'ordre, pour un transfert SCP via Wallix
-/// (aucun menu possible).
-///
-/// 1. Autorisations déclarées en config (`authorization`, puis `authorizations`).
-/// 2. Dernier recours : détection — nom dérivé `<ENV>-<GROUPE>_<group>` (le
-///    candidat le plus qualifié), ou `None` (login sans autorisation).
-#[cfg(unix)]
-fn wallix_scp_candidates(server: &ResolvedServer) -> Vec<Option<String>> {
-    let configured = crate::wallix::configured_authorizations(server);
-    if !configured.is_empty() {
-        return configured.into_iter().map(Some).collect();
-    }
-    let detected = crate::wallix::build_expected_groups(server)
-        .ok()
-        .and_then(|groups| groups.into_iter().last());
-    vec![detected]
-}
-
-/// Wallix refuse la cible/autorisation demandée (« Cible invalide »).
-#[cfg(unix)]
-fn is_wallix_invalid_target(stderr: &str) -> bool {
-    let lower = stderr.to_lowercase();
-    lower.contains("cible invalide") || lower.contains("invalid target")
-}
-
 /// Construit les arguments du binaire `scp` pour un transfert via Wallix.
 ///
 /// Format du login : `user@cible+SSH+autorisation+bastion_user@bastion:chemin`, avec `-A` pour
@@ -402,7 +377,7 @@ fn transfer_wallix_scp(
 
     // Chaque autorisation candidate est essayée tant que Wallix répond
     // « Cible invalide » ; toute autre erreur est remontée immédiatement.
-    let candidates = wallix_scp_candidates(server);
+    let candidates = crate::wallix::fallback_authorizations(server);
     let mut refused: Vec<String> = Vec::new();
     for authorization in &candidates {
         let args =
@@ -443,7 +418,7 @@ fn transfer_wallix_scp(
         if let Some(mut err) = child.stderr.take() {
             let _ = err.read_to_string(&mut stderr);
         }
-        if is_wallix_invalid_target(&stderr) {
+        if crate::wallix::is_invalid_target(&stderr) {
             refused.push(endpoint);
             continue;
         }
@@ -884,63 +859,6 @@ scp: Connection closed\n";
             ScpDirection::Upload => args[n - 1].clone(),
             ScpDirection::Download => args[n - 2].clone(),
         }
-    }
-
-    // ── Candidats d'autorisation : config d'abord, détection en dernier ──────
-
-    #[test]
-    #[cfg(unix)]
-    fn wallix_scp_candidates_configured_in_order() {
-        let mut server = wallix_server();
-        server.wallix_authorizations = vec!["PR-A_ces3s-admins".into(), "PR-B_ces3s-admins".into()];
-        assert_eq!(
-            wallix_scp_candidates(&server),
-            vec![
-                Some("PR-A_ces3s-admins".to_string()),
-                Some("PR-B_ces3s-admins".to_string())
-            ]
-        );
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn wallix_scp_candidates_explicit_authorization_first() {
-        let mut server = wallix_server();
-        server.wallix_authorizations = vec!["PR-A_ces3s-admins".into()];
-        server.wallix_authorization = Some("STI-ANSCORE_ces3s-admins".into());
-        assert_eq!(
-            wallix_scp_candidates(&server)[0].as_deref(),
-            Some("STI-ANSCORE_ces3s-admins")
-        );
-    }
-
-    /// Dernier recours : nom dérivé `<ENV>-<GROUPE>_<group>`.
-    #[test]
-    #[cfg(unix)]
-    fn wallix_scp_candidates_fall_back_to_detection() {
-        assert_eq!(
-            wallix_scp_candidates(&wallix_server()),
-            vec![Some("PR-COLIBRIS_ces3s-admins".to_string())]
-        );
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn wallix_scp_candidates_without_anything() {
-        let mut server = wallix_server();
-        server.wallix_group = None;
-        assert_eq!(wallix_scp_candidates(&server), vec![None]);
-    }
-
-    /// « Cible invalide » (FR) / « Invalid target » (EN) → candidat suivant.
-    #[test]
-    #[cfg(unix)]
-    fn wallix_invalid_target_detection() {
-        assert!(is_wallix_invalid_target(
-            "\nCible invalide\n\nscp: Connection closed"
-        ));
-        assert!(is_wallix_invalid_target("Invalid target"));
-        assert!(!is_wallix_invalid_target("Permission denied (publickey)"));
     }
 
     // ── Arguments scp ─────────────────────────────────────────────────────────
