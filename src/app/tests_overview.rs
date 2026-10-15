@@ -216,7 +216,6 @@ fn poll_overview_delivers_ok_result() {
         load: "0.5".to_string(),
         ram_pct: 60,
         disk_pct: 40,
-        profile: crate::probe::ProbeProfile::Standard,
         kernel: String::new(),
         cpu_model: String::new(),
         cpu_cores: 1,
@@ -224,7 +223,6 @@ fn poll_overview_delivers_ok_result() {
         ram_total_gb: 0.0,
         disk_total_gb: 0.0,
         extra_fs: vec![],
-        notes: vec![],
         control_master_active: false,
     };
     tx.send((0, Ok(probe_result))).unwrap();

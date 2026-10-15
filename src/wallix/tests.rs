@@ -826,3 +826,85 @@ fn test_build_expected_groups_puts_configured_first() {
         vec!["PP-CUSTOM_dev-admins".to_string()]
     );
 }
+
+// ── Autorisations candidates hors menu (SCP, commande, probe) ────────────────
+
+#[test]
+fn fallback_authorizations_configured_in_order() {
+    let mut server = alpha_server();
+    server.wallix_authorizations = vec!["PP-A_dev-admins".into(), "PP-B_dev-admins".into()];
+    assert_eq!(
+        fallback_authorizations(&server),
+        vec![
+            Some("PP-A_dev-admins".to_string()),
+            Some("PP-B_dev-admins".to_string())
+        ]
+    );
+}
+
+#[test]
+fn fallback_authorizations_explicit_first() {
+    let mut server = alpha_server();
+    server.wallix_authorizations = vec!["PP-A_dev-admins".into()];
+    server.wallix_authorization = Some("STI-X_dev-admins".into());
+    assert_eq!(
+        fallback_authorizations(&server)[0].as_deref(),
+        Some("STI-X_dev-admins")
+    );
+}
+
+/// Dernier recours : nom dérivé `<ENV>-<GROUPE>_<group>`.
+#[test]
+fn fallback_authorizations_use_detection() {
+    assert_eq!(
+        fallback_authorizations(&alpha_server()),
+        vec![Some("PP-ALPHA_dev-admins".to_string())]
+    );
+}
+
+#[test]
+fn fallback_authorizations_without_anything() {
+    let mut server = alpha_server();
+    server.wallix_group = None;
+    assert_eq!(fallback_authorizations(&server), vec![None]);
+}
+
+/// « Cible invalide » (FR) / « Invalid target » (EN) → candidat suivant.
+#[test]
+fn invalid_target_detection() {
+    assert!(is_invalid_target(
+        "\nCible invalide\n\nscp: Connection closed"
+    ));
+    assert!(is_invalid_target("Invalid target"));
+    assert!(!is_invalid_target("Permission denied (publickey)"));
+}
+
+// ── Autorisation affichée dans les détails ──────────────────────────────────
+
+#[test]
+fn authorization_display_configured_in_order() {
+    let mut server = alpha_server();
+    server.wallix_authorizations = vec!["PP-A_dev-admins".into(), "PP-B_dev-admins".into()];
+    assert_eq!(
+        authorization_display(&server),
+        AuthorizationDisplay::Configured(vec![
+            "PP-A_dev-admins".to_string(),
+            "PP-B_dev-admins".to_string()
+        ])
+    );
+}
+
+#[test]
+fn authorization_display_derived_from_structure() {
+    assert_eq!(
+        authorization_display(&alpha_server()),
+        AuthorizationDisplay::Derived("PP-ALPHA_dev-admins".to_string())
+    );
+}
+
+#[test]
+fn authorization_display_menu_when_nothing_known() {
+    let mut server = alpha_server();
+    server.wallix_group = None;
+    assert_eq!(authorization_display(&server), AuthorizationDisplay::Menu);
+}

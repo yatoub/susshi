@@ -46,6 +46,24 @@ Search behavior:
 
 If the clipboard is unavailable (headless session, missing `wl-clipboard`, etc.), an overlay displays the command for manual copy. Dismiss with `Enter` or `Esc`.
 
+### Mode-dependent details
+
+The detail panel only shows the connection settings of the selected mode:
+
+| Mode | Extra lines |
+| --- | --- |
+| Direct | none |
+| Jump | `Jump:` — the jump host (`jump`) |
+| Wallix | `Wallix:` — `bastion_user@bastion`, and `Authorization:` (see below) |
+
+The Wallix `Authorization:` line follows the same resolution as SCP, tunnels, ad-hoc commands and diagnostics:
+
+- declared authorizations (`wallix.authorization`, then `wallix.authorizations`), in the order they are tried;
+- otherwise the name derived from the YAML structure, marked `(derived)`;
+- otherwise `Wallix menu`: the selection is made in the bastion menu when connecting.
+
+Nothing is shown when the selected mode is Jump or Wallix but the server has no jump host or bastion configured.
+
 ## Productivity Features
 
 | Key | Action |
@@ -92,6 +110,8 @@ Diagnostics include:
 - Extra filesystem checks from `probe_filesystems`.
 
 Ad-hoc command output is displayed in the detail pane (up to 20 lines) with colored exit status.
+
+Both `x` and `d` use the current connection mode (Direct, Jump or Wallix), with the server's `ssh_options`. They run non-interactively (`BatchMode=yes`): authentication must not require a prompt.
 
 ### Command history
 

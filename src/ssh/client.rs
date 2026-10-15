@@ -20,9 +20,9 @@ use std::{
 
 #[path = "client/args.rs"]
 mod args;
-pub use args::build_ssh_args;
 #[cfg(unix)]
 pub(crate) use args::build_wallix_bastion_args;
+pub use args::{build_ssh_args, build_wallix_direct_args};
 
 #[path = "client/wallix_pty.rs"]
 mod wallix_pty;

@@ -40,6 +40,9 @@ label-mode = Mode:
 label-key = Key:
 label-jump = Jump:
 label-wallix = Wallix:
+label-wallix-authorization = Authorization:
+wallix-authorization-derived = (derived)
+wallix-authorization-menu = Wallix menu
 label-options = Options:
 
 # ── Probe / diagnostics ───────────────────────────────────────────────────────

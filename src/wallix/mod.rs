@@ -11,8 +11,9 @@ use anyhow::{Result, anyhow};
 mod target;
 pub(crate) use target::group_suffix_matches;
 pub use target::{
-    WallixMenuEntry, build_direct_login, build_expected_groups, build_expected_target,
-    build_expected_targets, configured_authorizations, direct_authorization,
+    AuthorizationDisplay, WallixMenuEntry, authorization_display, build_direct_login,
+    build_expected_groups, build_expected_target, build_expected_targets,
+    configured_authorizations, direct_authorization, fallback_authorizations, is_invalid_target,
 };
 
 #[path = "menu.rs"]

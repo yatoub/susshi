@@ -4,15 +4,18 @@
 //! retourne les métriques système dans un [`ProbeResult`].
 
 use crate::config::{ConnectionMode, ResolvedServer};
-use crate::ssh::client::build_ssh_args;
-use crate::wallix::{build_expected_groups, build_expected_target, build_expected_targets};
+use crate::ssh::exec::run_remote;
 use anyhow::Result;
-use std::net::{TcpStream, ToSocketAddrs};
-use std::process::Command;
-use std::time::Duration;
+
+/// Délai maximal d'un diagnostic : au-delà, `ssh` est tué et le probe échoue.
+const PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
+/// Ligne émise en tête de sortie : tout ce qui précède (bannière Wallix,
+/// motd, sortie des fichiers de démarrage du shell) est ignoré au parsing.
+const PROBE_MARKER: &str = "__SUSSHI_PROBE__";
 
 /// Partie fixe du one-liner bash envoyé en argument SSH.
-/// Retourne exactement 7 lignes :
+/// Après le marqueur [`PROBE_MARKER`], retourne exactement 7 lignes :
 /// 1. kernel (`uname -r`)
 /// 2. modèle CPU (première entrée `/proc/cpuinfo`)
 /// 3. nombre de cœurs logiques (`nproc`)
@@ -34,10 +37,7 @@ const PROBE_BASE: &str = concat!(
 /// supplémentaire configuré. Chaque filesystem produit soit `<pct> <bytes>`
 /// (présent) soit `absent` (non monté ou inaccessible).
 fn build_probe_cmd(extra_filesystems: &[String]) -> String {
-    if extra_filesystems.is_empty() {
-        return PROBE_BASE.to_string();
-    }
-    let mut cmd = PROBE_BASE.to_string();
+    let mut cmd = format!("echo {PROBE_MARKER}; {PROBE_BASE}");
     for fs in extra_filesystems {
         cmd.push_str(&format!(
             "; df -B1 {fs} 2>/dev/null \
@@ -68,17 +68,9 @@ pub struct FsEntry {
     pub usage: Option<FsUsage>,
 }
 
-/// Profil de rendu du diagnostic.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ProbeProfile {
-    Standard,
-    Wallix,
-}
-
 /// Métriques système collectées par [`probe`].
 #[derive(Debug, Clone)]
 pub struct ProbeResult {
-    pub profile: ProbeProfile,
     pub kernel: String,
     pub cpu_model: String,
     /// Nombre de cœurs logiques (`nproc`).
@@ -97,8 +89,6 @@ pub struct ProbeResult {
     pub disk_total_gb: f32,
     /// Filesystems supplémentaires configurés via `probe_filesystems`.
     pub extra_fs: Vec<FsEntry>,
-    /// Lignes additionnelles affichées pour les profils spéciaux.
-    pub notes: Vec<String>,
     /// `true` si un socket ControlMaster SSH actif a été détecté localement.
     pub control_master_active: bool,
 }
@@ -122,9 +112,17 @@ pub enum ProbeState {
 impl ProbeResult {
     /// Parse la sortie de `build_probe_cmd` : 7 lignes fixes + N lignes pour
     /// les filesystems supplémentaires (soit `<pct> <bytes>` soit `absent`).
+    /// Si le marqueur [`PROBE_MARKER`] est présent, seules les lignes qui le
+    /// suivent sont lues.
     pub fn parse(raw: &str, extra_filesystems: &[String]) -> Result<Self> {
-        let lines: Vec<&str> = raw
+        let body = raw
             .lines()
+            .position(|l| l.trim() == PROBE_MARKER)
+            .map_or(raw.lines().collect::<Vec<_>>(), |i| {
+                raw.lines().skip(i + 1).collect()
+            });
+        let lines: Vec<&str> = body
+            .into_iter()
             .map(str::trim)
             .filter(|l| !l.is_empty())
             .collect();
@@ -160,7 +158,6 @@ impl ProbeResult {
         }
 
         Ok(ProbeResult {
-            profile: ProbeProfile::Standard,
             kernel: lines[0].to_string(),
             cpu_model: lines[1].to_string(),
             cpu_cores,
@@ -171,7 +168,6 @@ impl ProbeResult {
             disk_pct,
             disk_total_gb,
             extra_fs,
-            notes: vec![],
             control_master_active: false,
         })
     }
@@ -195,41 +191,16 @@ fn parse_pct_bytes(line: &str, label: &str) -> Result<(u8, f32)> {
 
 /// Lance un diagnostic SSH non-interactif et retourne les métriques système.
 ///
-/// Réutilise [`build_ssh_args`] pour construire tous les arguments de connexion,
-/// puis ajoute le one-liner bash comme commande distante.
-///
-/// **Modes supportés** : `Direct`, `Jump` et `Wallix`.
-/// En mode `Wallix`, retourne un profil compatible bastion sans commande distante.
+/// Le one-liner est exécuté via [`run_remote`], qui gère les trois modes
+/// (`Direct`, `Jump`, `Wallix` — autorisations candidates comprises).
 pub fn probe(server: &ResolvedServer, mode: ConnectionMode) -> Result<ProbeResult> {
-    if mode == ConnectionMode::Wallix {
-        return Ok(probe_wallix(server));
-    }
-
-    let mut args = build_ssh_args(server, mode, false)?;
-
-    // La destination `user@host` est toujours le dernier argument de
-    // build_ssh_args (pour Direct et Jump). On l'extrait temporairement
-    // pour pouvoir insérer les options de probe avant elle.
-    let destination = args
-        .pop()
-        .ok_or_else(|| anyhow::anyhow!("liste d'args SSH vide"))?;
-
-    // Options probe insérées avant la destination
-    args.push("-n".into()); // stdin depuis /dev/null — commande non-interactive
-    args.push("-o".into());
-    args.push("ConnectTimeout=10".into());
-    args.push("-o".into());
-    args.push("BatchMode=yes".into()); // pas d'invite interactive
-
-    args.push(destination);
     let cmd = build_probe_cmd(&server.probe_filesystems);
-    args.push(cmd); // commande distante
+    let output = run_remote(server, mode, &cmd, PROBE_TIMEOUT)?;
 
-    let output = Command::new("ssh").args(&args).output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let stderr = stderr.trim();
+    // Un bastion peut fermer la session sans transmettre le code de sortie :
+    // une sortie complète (marqueur présent) prime sur le statut.
+    if !output.success && !output.stdout.contains(PROBE_MARKER) {
+        let stderr = output.stderr.trim();
         // Produire des messages lisibles pour les erreurs known_host courantes.
         if stderr.contains("REMOTE HOST IDENTIFICATION HAS CHANGED") {
             anyhow::bail!(
@@ -249,73 +220,11 @@ pub fn probe(server: &ResolvedServer, mode: ConnectionMode) -> Result<ProbeResul
         anyhow::bail!("SSH probe échoué : {}", stderr);
     }
 
-    let mut result = ProbeResult::parse(
-        &String::from_utf8_lossy(&output.stdout),
-        &server.probe_filesystems,
-    )?;
-    result.control_master_active = crate::ssh::client::is_control_master_active(server);
+    let mut result = ProbeResult::parse(&output.stdout, &server.probe_filesystems)?;
+    // ControlMaster non supporté en mode Wallix (voir build_ssh_args).
+    result.control_master_active =
+        mode != ConnectionMode::Wallix && crate::ssh::client::is_control_master_active(server);
     Ok(result)
-}
-
-fn probe_wallix(server: &ResolvedServer) -> ProbeResult {
-    let expected_target = build_expected_target(server);
-    let targets = build_expected_targets(server);
-    let groups = build_expected_groups(server).unwrap_or_else(|_| vec!["<missing>".to_string()]);
-    let bastion = server
-        .bastion_host
-        .clone()
-        .unwrap_or_else(|| "<missing>".to_string());
-    let (bastion_host, bastion_port) = parse_host_port_with_default(&bastion, 22);
-
-    let mut notes = vec![
-        "profile: wallix".to_string(),
-        format!("target: {}", expected_target),
-        format!("target candidates: {}", targets.join(" | ")),
-        format!("group candidates: {}", groups.join(" | ")),
-        format!("bastion: {}:{}", bastion_host, bastion_port),
-    ];
-
-    match check_tcp_reachability(&bastion_host, bastion_port) {
-        Ok(()) => notes.push("reachability: ok".to_string()),
-        Err(err) => notes.push(format!("reachability: error ({})", err)),
-    }
-
-    notes.push("skipped: remote system metrics, filesystems, tunnels".to_string());
-
-    ProbeResult {
-        profile: ProbeProfile::Wallix,
-        kernel: String::new(),
-        cpu_model: String::new(),
-        cpu_cores: 0,
-        os_name: String::new(),
-        load: String::new(),
-        ram_pct: 0,
-        ram_total_gb: 0.0,
-        disk_pct: 0,
-        disk_total_gb: 0.0,
-        extra_fs: vec![],
-        notes,
-        control_master_active: false,
-    }
-}
-
-fn parse_host_port_with_default(input: &str, default_port: u16) -> (String, u16) {
-    if let Some((host, port)) = input.split_once(':')
-        && let Ok(parsed_port) = port.parse::<u16>()
-    {
-        return (host.to_string(), parsed_port);
-    }
-
-    (input.to_string(), default_port)
-}
-
-fn check_tcp_reachability(host: &str, port: u16) -> Result<()> {
-    let mut addresses = format!("{}:{}", host, port).to_socket_addrs()?;
-    let socket = addresses
-        .next()
-        .ok_or_else(|| anyhow::anyhow!("no socket address resolved"))?;
-    TcpStream::connect_timeout(&socket, Duration::from_secs(3))?;
-    Ok(())
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -453,21 +362,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_host_port_with_default_keeps_default_port() {
-        let (host, port) = parse_host_port_with_default("bastion.example.com", 22);
-        assert_eq!(host, "bastion.example.com");
-        assert_eq!(port, 22);
-    }
-
-    #[test]
-    fn parse_host_port_with_default_extracts_port() {
-        let (host, port) = parse_host_port_with_default("bastion.example.com:8022", 22);
-        assert_eq!(host, "bastion.example.com");
-        assert_eq!(port, 8022);
-    }
-
-    #[test]
-    fn wallix_probe_returns_wallix_profile() {
+    fn wallix_probe_without_bastion_fails() {
         let server = ResolvedServer {
             namespace: String::new(),
             group_name: String::new(),
@@ -480,7 +375,7 @@ mod tests {
             ssh_options: vec![],
             default_mode: ConnectionMode::Wallix,
             jump_host: None,
-            bastion_host: Some("127.0.0.1:65535".to_string()),
+            bastion_host: None,
             bastion_user: Some("demo_user".to_string()),
             bastion_template: "{target_user}@%n:SSH:{bastion_user}".to_string(),
             wallix_group: Some("APP-ALPHA_ops-admins".to_string()),
@@ -511,19 +406,23 @@ mod tests {
             ssh_agent_sock: String::new(),
         };
 
-        let result = probe(&server, ConnectionMode::Wallix).unwrap();
-        assert_eq!(result.profile, ProbeProfile::Wallix);
-        assert!(
-            result
-                .notes
-                .iter()
-                .any(|line| line.contains("target: demo_user@default@APP-ALPHA-BD:SSH"))
-        );
-        assert!(
-            result
-                .notes
-                .iter()
-                .any(|line| line.contains("group candidates: APP-ALPHA_ops-admins"))
-        );
+        // Plus de profil dégradé : le probe Wallix collecte les vraies
+        // métriques, et échoue proprement si le bastion manque.
+        let err = probe(&server, ConnectionMode::Wallix).unwrap_err();
+        assert!(err.to_string().contains("Wallix host"), "{err}");
+    }
+
+    /// Bannière (Wallix, motd…) avant la sortie : ignorée grâce au marqueur.
+    #[test]
+    fn parse_skips_banner_before_marker() {
+        let raw = format!("Bienvenue sur le bastion\nUsage restreint\n{PROBE_MARKER}\n{SAMPLE}");
+        let r = ProbeResult::parse(&raw, &[]).unwrap();
+        assert_eq!(r.kernel, "6.1.0-28-amd64");
+        assert_eq!(r.cpu_cores, 8);
+    }
+
+    #[test]
+    fn build_probe_cmd_starts_with_marker() {
+        assert!(build_probe_cmd(&[]).starts_with(&format!("echo {PROBE_MARKER}; ")));
     }
 }

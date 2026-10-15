@@ -50,7 +50,7 @@ groups:
             - "PP-BAS_{group}"
 ```
 
-Resolution order (interactive SSH, SCP and tunnels):
+Resolution order (interactive SSH, SCP, tunnels, ad-hoc commands and diagnostics):
 
 1. `wallix.authorization` — exact name, always first (`{group}` is not replaced there).
 2. `wallix.authorizations` — declared candidates, in order.
@@ -59,6 +59,8 @@ Resolution order (interactive SSH, SCP and tunnels):
 An entry containing `{group}` is ignored when no `wallix.group` is resolved.
 
 > **Tip:** the authorization names are listed in the Wallix menu (`Autorisation` column) when you connect to the bastion without a target.
+
+In Wallix mode, the TUI detail panel shows the resolved authorization (`Authorization:` line): the declared names, the derived name marked `(derived)`, or `Wallix menu` when nothing is known. See [tui.md](tui.md#mode-dependent-details).
 
 ## How susshi Connects
 
@@ -176,6 +178,14 @@ groups:
 - **SCP** ([scp.md](scp.md)) goes through the system `scp` binary with the direct login: `scp -A … user@target+SSH+AUTHORIZATION+bastion_user@bastion:path`. Declared authorizations are tried in order, moving to the next one while Wallix answers `Cible invalide`; the derived name is the last resort.
 - **Tunnels** ([tunnels.md](tunnels.md)) require a known authorization (a background tunnel cannot answer the menu). susshi runs `ssh -A -T -L …` and keeps a shell session open on the target, because Wallix closes the connection when port forwarding is requested outside an open session. Port forwarding is not necessarily enabled on every environment: ask the bastion administrator if needed.
 
+## Commands and Diagnostics
+
+The ad-hoc command (`x`) and the diagnostic probe (`d`) use the same direct login as SCP, trying the authorization candidates in order while Wallix answers `Cible invalide`.
+
+The command is not sent as an SSH `exec` request (the *remote command* subprotocol is often not granted by the authorization): susshi opens a shell session without PTY (`ssh -A -T`) and writes the command on its standard input, followed by an end marker carrying the exit code and `exit`. The bastion does not always close the session when the remote shell ends, so susshi stops the session as soon as the marker is received. The output is that of your login shell on the target; the probe ignores anything printed before its own output (banner, shell startup files).
+
+Timeouts: 120 s for an ad-hoc command, 30 s for a diagnostic. Past that, `ssh` is killed and the partial output is shown in the error.
+
 ## Behavior Controls
 
 - `authorizations`: candidate authorization names, in order; `{group}` is replaced by `group`.
@@ -200,7 +210,7 @@ Wallix rejects the target/authorization pair in the login string.
 
 - Check the authorization name against the `Autorisation` column of the Wallix menu.
 - Check that `host` is the name Wallix knows for the target (usually the FQDN).
-- For SCP, the error lists every target that was tried.
+- For SCP, ad-hoc commands and diagnostics, the error lists every target that was tried.
 
 ### `signature algorithm not supported`
 

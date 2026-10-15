@@ -55,6 +55,91 @@ pub fn build_ssh_args(
     mode: ConnectionMode,
     verbose: bool,
 ) -> Result<Vec<String>> {
+    let mut args = common_options(server, mode, verbose);
+
+    // Destination — toujours en dernier.
+    match mode {
+        ConnectionMode::Direct => {
+            collect_target_args(&mut args, &server.user, &server.host, server.port);
+        }
+        ConnectionMode::Jump => {
+            let jump_str = server.jump_host.as_deref().unwrap_or("");
+            if jump_str.is_empty() {
+                return Err(anyhow::anyhow!("Jump host not configured for this server"));
+            }
+            args.push("-J".into());
+            args.push(jump_str.to_string());
+            collect_target_args(&mut args, &server.user, &server.host, server.port);
+        }
+        ConnectionMode::Wallix => match crate::wallix::direct_authorization(server) {
+            // Autorisation connue → login direct (sans menu).
+            Some(auth) => push_wallix_direct_destination(&mut args, server, Some(&auth))?,
+            None => {
+                let bastion_user = server.bastion_user.as_deref().unwrap_or("root");
+                let (t_host, _t_port) = parse_host_port(&server.host);
+                let login = build_wallix_login_user(server, bastion_user, t_host);
+                push_bastion_destination(&mut args, server, login)?;
+            }
+        },
+    }
+
+    Ok(args)
+}
+
+/// Arguments SSH d'un login Wallix direct (sans menu) pour une autorisation
+/// donnée : `-l user@cible+PROTO[+autorisation]+bastion_user bastion`.
+///
+/// Contrairement à [`build_ssh_args`], l'autorisation est imposée par
+/// l'appelant, qui peut ainsi essayer plusieurs candidates (exécution de
+/// commande, probe). Même invariant : la destination est le dernier argument.
+pub fn build_wallix_direct_args(
+    server: &ResolvedServer,
+    authorization: Option<&str>,
+) -> Result<Vec<String>> {
+    let mut args = common_options(server, ConnectionMode::Wallix, false);
+    push_wallix_direct_destination(&mut args, server, authorization)?;
+    Ok(args)
+}
+
+/// Login direct ; `-A` : le bastion s'authentifie sur la cible via l'agent
+/// transféré.
+fn push_wallix_direct_destination(
+    args: &mut Vec<String>,
+    server: &ResolvedServer,
+    authorization: Option<&str>,
+) -> Result<()> {
+    if !server.agent_forwarding {
+        args.push("-A".into());
+    }
+    let login = crate::wallix::build_direct_login(server, authorization);
+    push_bastion_destination(args, server, login)
+}
+
+fn push_bastion_destination(
+    args: &mut Vec<String>,
+    server: &ResolvedServer,
+    login: String,
+) -> Result<()> {
+    let bastion_host_str = server.bastion_host.as_deref().unwrap_or("");
+    if bastion_host_str.is_empty() {
+        return Err(anyhow::anyhow!(
+            "Wallix host not configured for this server"
+        ));
+    }
+    args.push("-l".into());
+    args.push(login);
+    let (b_host, b_port) = parse_host_port(bastion_host_str);
+    if let Some(p) = b_port {
+        args.push("-p".into());
+        args.push(p.to_string());
+    }
+    args.push(b_host.to_string());
+    Ok(())
+}
+
+/// Options communes à tous les modes (config, clés, options, agent,
+/// ControlMaster), sans la destination.
+fn common_options(server: &ResolvedServer, mode: ConnectionMode, verbose: bool) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
 
     if !server.use_system_ssh_config {
@@ -125,54 +210,7 @@ pub fn build_ssh_args(
         args.push(format!("ControlPersist={}", server.control_persist));
     }
 
-    // Destination — toujours en dernier.
-    match mode {
-        ConnectionMode::Direct => {
-            collect_target_args(&mut args, &server.user, &server.host, server.port);
-        }
-        ConnectionMode::Jump => {
-            let jump_str = server.jump_host.as_deref().unwrap_or("");
-            if jump_str.is_empty() {
-                return Err(anyhow::anyhow!("Jump host not configured for this server"));
-            }
-            args.push("-J".into());
-            args.push(jump_str.to_string());
-            collect_target_args(&mut args, &server.user, &server.host, server.port);
-        }
-        ConnectionMode::Wallix => {
-            let bastion_host_str = server.bastion_host.as_deref().unwrap_or("");
-            if bastion_host_str.is_empty() {
-                return Err(anyhow::anyhow!(
-                    "Wallix host not configured for this server"
-                ));
-            }
-            let user_string = match crate::wallix::direct_authorization(server) {
-                // Autorisation connue → login direct (sans menu). `-A` : le
-                // bastion s'authentifie sur la cible via l'agent transféré.
-                Some(auth) => {
-                    if !server.agent_forwarding {
-                        args.push("-A".into());
-                    }
-                    crate::wallix::build_direct_login(server, Some(&auth))
-                }
-                None => {
-                    let bastion_user = server.bastion_user.as_deref().unwrap_or("root");
-                    let (t_host, _t_port) = parse_host_port(&server.host);
-                    build_wallix_login_user(server, bastion_user, t_host)
-                }
-            };
-            args.push("-l".into());
-            args.push(user_string);
-            let (b_host, b_port) = parse_host_port(bastion_host_str);
-            if let Some(p) = b_port {
-                args.push("-p".into());
-                args.push(p.to_string());
-            }
-            args.push(b_host.to_string());
-        }
-    }
-
-    Ok(args)
+    args
 }
 
 #[cfg(unix)]

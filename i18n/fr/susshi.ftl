@@ -40,6 +40,9 @@ label-mode = Mode:
 label-key = Clé:
 label-jump = Rebond:
 label-wallix = Wallix:
+label-wallix-authorization = Autorisation:
+wallix-authorization-derived = (déduite)
+wallix-authorization-menu = menu Wallix
 label-options = Options:
 
 # ── Bloc diagnostic ───────────────────────────────────────────────────────────
