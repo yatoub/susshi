@@ -1285,7 +1285,7 @@
 <li>Disk usage bars for <code>/</code> and any extra paths in <code>probe_filesystems</code></li>
 <li>A ⚠ warning for any configured filesystem that is not mounted</li>
 </ul>
-<p>The probe uses the current connection mode (Direct/Jump) — Wallix is not supported.</p>
+<p>The probe uses the current connection mode (Direct, Jump or Wallix). In Wallix mode it goes through the direct login, like SCP — see <a href="../wallix/#commands-and-diagnostics">wallix.md</a>.</p>
 <h2 id="verbose-mode">Verbose Mode<a class="headerlink" href="#verbose-mode" title="Permanent link">&para;</a></h2>
 <p>Press <code>v</code> in the TUI (or pass <code>--verbose</code> on the CLI) to enable verbose SSH output. The raw <code>ssh -v</code> output is shown in the detail pane after connecting, which exposes handshake details, key negotiation, and authentication steps.</p>
 <h2 id="persistent-state-susshi_statejson">Persistent State (<code>~/.susshi_state.json</code>)<a class="headerlink" href="#persistent-state-susshi_statejson" title="Permanent link">&para;</a></h2>

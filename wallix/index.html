@@ -964,6 +964,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#commands-and-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commands and Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#behavior-controls" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1431,6 +1442,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#commands-and-diagnostics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Commands and Diagnostics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#behavior-controls" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1584,7 +1606,7 @@
 <a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"PP-COLIBRIS_{group}"</span>
 <a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">            </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"PP-BAS_{group}"</span>
 </code></pre></div>
-<p>Resolution order (interactive SSH, SCP and tunnels):</p>
+<p>Resolution order (interactive SSH, SCP, tunnels, ad-hoc commands and diagnostics):</p>
 <ol>
 <li><code>wallix.authorization</code> — exact name, always first (<code>{group}</code> is not replaced there).</li>
 <li><code>wallix.authorizations</code> — declared candidates, in order.</li>
@@ -1594,6 +1616,7 @@
 <blockquote>
 <p><strong>Tip:</strong> the authorization names are listed in the Wallix menu (<code>Autorisation</code> column) when you connect to the bastion without a target.</p>
 </blockquote>
+<p>In Wallix mode, the TUI detail panel shows the resolved authorization (<code>Authorization:</code> line): the declared names, the derived name marked <code>(derived)</code>, or <code>Wallix menu</code> when nothing is known. See <a href="../tui/#mode-dependent-details">tui.md</a>.</p>
 <h2 id="how-susshi-connects">How susshi Connects<a class="headerlink" href="#how-susshi-connects" title="Permanent link">&para;</a></h2>
 <h3 id="direct-login-authorization-known">Direct login (authorization known)<a class="headerlink" href="#direct-login-authorization-known" title="Permanent link">&para;</a></h3>
 <p>When exactly <strong>one</strong> authorization is known from the configuration, susshi connects directly:</p>
@@ -1682,6 +1705,10 @@
 <li><strong>SCP</strong> (<a href="../scp/">scp.md</a>) goes through the system <code>scp</code> binary with the direct login: <code>scp -A … user@target+SSH+AUTHORIZATION+bastion_user@bastion:path</code>. Declared authorizations are tried in order, moving to the next one while Wallix answers <code>Cible invalide</code>; the derived name is the last resort.</li>
 <li><strong>Tunnels</strong> (<a href="../tunnels/">tunnels.md</a>) require a known authorization (a background tunnel cannot answer the menu). susshi runs <code>ssh -A -T -L …</code> and keeps a shell session open on the target, because Wallix closes the connection when port forwarding is requested outside an open session. Port forwarding is not necessarily enabled on every environment: ask the bastion administrator if needed.</li>
 </ul>
+<h2 id="commands-and-diagnostics">Commands and Diagnostics<a class="headerlink" href="#commands-and-diagnostics" title="Permanent link">&para;</a></h2>
+<p>The ad-hoc command (<code>x</code>) and the diagnostic probe (<code>d</code>) use the same direct login as SCP, trying the authorization candidates in order while Wallix answers <code>Cible invalide</code>.</p>
+<p>The command is not sent as an SSH <code>exec</code> request (the <em>remote command</em> subprotocol is often not granted by the authorization): susshi opens a shell session without PTY (<code>ssh -A -T</code>) and writes the command on its standard input, followed by an end marker carrying the exit code and <code>exit</code>. The bastion does not always close the session when the remote shell ends, so susshi stops the session as soon as the marker is received. The output is that of your login shell on the target; the probe ignores anything printed before its own output (banner, shell startup files).</p>
+<p>Timeouts: 120 s for an ad-hoc command, 30 s for a diagnostic. Past that, <code>ssh</code> is killed and the partial output is shown in the error.</p>
 <h2 id="behavior-controls">Behavior Controls<a class="headerlink" href="#behavior-controls" title="Permanent link">&para;</a></h2>
 <ul>
 <li><code>authorizations</code>: candidate authorization names, in order; <code>{group}</code> is replaced by <code>group</code>.</li>
@@ -1702,7 +1729,7 @@
 <ul>
 <li>Check the authorization name against the <code>Autorisation</code> column of the Wallix menu.</li>
 <li>Check that <code>host</code> is the name Wallix knows for the target (usually the FQDN).</li>
-<li>For SCP, the error lists every target that was tried.</li>
+<li>For SCP, ad-hoc commands and diagnostics, the error lists every target that was tried.</li>
 </ul>
 <h3 id="signature-algorithm-not-supported"><code>signature algorithm not supported</code><a class="headerlink" href="#signature-algorithm-not-supported" title="Permanent link">&para;</a></h3>
 <p>The bastion signs with <code>ssh-rsa</code> (SHA-1), refused by default by recent OpenSSH. Allow it for susshi connections:</p>

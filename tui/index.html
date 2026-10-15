@@ -661,6 +661,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Connection Controls">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode-dependent-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode-dependent details
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1168,6 +1185,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Connection Controls">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode-dependent-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode-dependent details
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1400,6 +1434,37 @@
 </tbody>
 </table>
 <p>If the clipboard is unavailable (headless session, missing <code>wl-clipboard</code>, etc.), an overlay displays the command for manual copy. Dismiss with <code>Enter</code> or <code>Esc</code>.</p>
+<h3 id="mode-dependent-details">Mode-dependent details<a class="headerlink" href="#mode-dependent-details" title="Permanent link">&para;</a></h3>
+<p>The detail panel only shows the connection settings of the selected mode:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Extra lines</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direct</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Jump</td>
+<td><code>Jump:</code> — the jump host (<code>jump</code>)</td>
+</tr>
+<tr>
+<td>Wallix</td>
+<td><code>Wallix:</code> — <code>bastion_user@bastion</code>, and <code>Authorization:</code> (see below)</td>
+</tr>
+</tbody>
+</table>
+<p>The Wallix <code>Authorization:</code> line follows the same resolution as SCP, tunnels, ad-hoc commands and diagnostics:</p>
+<ul>
+<li>declared authorizations (<code>wallix.authorization</code>, then <code>wallix.authorizations</code>), in the order they are tried;</li>
+<li>otherwise the name derived from the YAML structure, marked <code>(derived)</code>;</li>
+<li>otherwise <code>Wallix menu</code>: the selection is made in the bastion menu when connecting.</li>
+</ul>
+<p>Nothing is shown when the selected mode is Jump or Wallix but the server has no jump host or bastion configured.</p>
 <h2 id="productivity-features">Productivity Features<a class="headerlink" href="#productivity-features" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1494,6 +1559,7 @@
 <li>Extra filesystem checks from <code>probe_filesystems</code>.</li>
 </ul>
 <p>Ad-hoc command output is displayed in the detail pane (up to 20 lines) with colored exit status.</p>
+<p>Both <code>x</code> and <code>d</code> use the current connection mode (Direct, Jump or Wallix), with the server's <code>ssh_options</code>. They run non-interactively (<code>BatchMode=yes</code>): authentication must not require a prompt.</p>
 <h3 id="command-history">Command history<a class="headerlink" href="#command-history" title="Permanent link">&para;</a></h3>
 <p>When the ad-hoc command prompt (<code>x</code>) is open, use <code>↑</code> and <code>↓</code> to navigate previously run commands. The history is deduplicated (identical consecutive commands are not duplicated) and <strong>persists across sessions</strong> (saved in <code>~/.susshi_state.json</code>, capped at 100 entries).</p>
 <h2 id="group-overview-dashboard">Group Overview Dashboard<a class="headerlink" href="#group-overview-dashboard" title="Permanent link">&para;</a></h2>
