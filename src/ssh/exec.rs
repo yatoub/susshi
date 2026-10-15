@@ -159,6 +159,20 @@ fn spawn_reader<R: Read + Send + 'static>(
     (buffer, handle)
 }
 
+/// Laisse les lecteurs vider les tubes, au plus [`READER_GRACE`], sans
+/// `join` bloquant : un descendant du processus (maître `ControlPersist`
+/// d'OpenSSH, commande lancée en arrière-plan) peut garder stdout/stderr
+/// ouverts bien après sa fin. Le thread lecteur se termine alors seul.
+fn wait_readers(readers: &[&std::thread::JoinHandle<()>]) {
+    let deadline = Instant::now() + READER_GRACE;
+    while Instant::now() < deadline && !readers.iter().all(|r| r.is_finished()) {
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
+/// Délai accordé aux lecteurs pour vider les tubes après la fin du processus.
+const READER_GRACE: Duration = Duration::from_millis(300);
+
 fn snapshot(buffer: &Arc<Mutex<Vec<u8>>>) -> String {
     buffer
         .lock()
@@ -228,8 +242,7 @@ fn run_process(
         if Instant::now() >= deadline {
             let _ = child.kill();
             let _ = child.wait();
-            let _ = stdout_reader.join();
-            let _ = stderr_reader.join();
+            wait_readers(&[&stdout_reader, &stderr_reader]);
             let partial = format!("{}{}", snapshot(&stdout_buf), snapshot(&stderr_buf));
             anyhow::bail!(
                 "délai dépassé ({}s) sans fin de commande : {}",
@@ -240,8 +253,7 @@ fn run_process(
         std::thread::sleep(Duration::from_millis(50));
     };
 
-    let _ = stdout_reader.join();
-    let _ = stderr_reader.join();
+    wait_readers(&[&stdout_reader, &stderr_reader]);
     let stdout = snapshot(&stdout_buf);
     let stderr = snapshot(&stderr_buf);
 

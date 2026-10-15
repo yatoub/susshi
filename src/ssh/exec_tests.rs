@@ -175,7 +175,7 @@ fn run_process_exit_code_from_marker() {
 #[cfg(unix)]
 fn run_process_returns_on_marker_even_if_session_stays_open() {
     let start = std::time::Instant::now();
-    let args = ["-c".to_string(), "cat | sh; sleep 30".to_string()];
+    let args = ["-c".to_string(), "cat | sh; sleep 30; true".to_string()];
     let out = run_process("sh", &args, Some("echo done"), T).unwrap();
     assert_eq!(out.stdout, "done\n");
     assert!(out.success);
@@ -191,10 +191,26 @@ fn run_process_returns_on_marker_even_if_session_stays_open() {
 #[cfg(unix)]
 fn run_process_times_out() {
     let start = std::time::Instant::now();
-    let args = ["-c".to_string(), "echo partial; sleep 30".to_string()];
+    let args = ["-c".to_string(), "echo partial; sleep 30; true".to_string()];
     let err = run_process("sh", &args, None, Duration::from_millis(300)).unwrap_err();
     assert!(err.to_string().contains("délai"), "{err}");
     assert!(err.to_string().contains("partial"), "{err}");
+    assert!(
+        start.elapsed() < Duration::from_secs(3),
+        "{:?}",
+        start.elapsed()
+    );
+}
+
+/// Le processus se termine mais un descendant garde stdout ouvert (ex. maître
+/// `ControlPersist` d'OpenSSH) : la sortie déjà reçue est rendue sans attendre.
+#[test]
+#[cfg(unix)]
+fn run_process_does_not_wait_for_descendants_holding_pipes() {
+    let start = std::time::Instant::now();
+    let args = ["-c".to_string(), "echo done; sleep 30 &".to_string()];
+    let out = run_process("sh", &args, None, T).unwrap();
+    assert_eq!(out.stdout, "done\n");
     assert!(
         start.elapsed() < Duration::from_secs(3),
         "{:?}",
