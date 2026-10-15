@@ -2,3 +2,5 @@
 .vscode
 .mcp.json
 /config/
+/result
+/result-*
