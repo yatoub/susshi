@@ -1,5 +1,6 @@
 /target
 .vscode
 .mcp.json
-/config//result
+/config/
+/result
 /result-*
