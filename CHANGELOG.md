@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.25.0] — 2026-10-15
+
+### Added
+
+- Ad-hoc command and probe through Wallix bastion ([#224](https://github.com/yatoub/susshi/pull/224))
+
+
 ## [0.24.0] — 2026-10-14
 
 ### Added
