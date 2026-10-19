@@ -34,8 +34,8 @@
 //! dernier recours) et le transfert
 //! d'agent (`-A`) :
 //! le bastion s'authentifie sur la cible via l'agent transféré, ce que
-//! libssh2 ne sait pas faire. La progression n'est connue qu'en fin de
-//! transfert.
+//! libssh2 ne sait pas faire. `scp` tourne sur un pseudo-terminal : son
+//! progress meter alimente la barre de progression.
 
 use crate::config::{ConnectionMode, ResolvedServer};
 use anyhow::Result;
@@ -356,9 +356,158 @@ fn scp_stderr_summary(stderr: &str) -> String {
     }
 }
 
+/// Extrait le pourcentage du progress meter d'OpenSSH
+/// (`fichier   42%  420MB  12.3MB/s   00:47 ETA`, rafraîchi par `\r`).
+///
+/// Les octets reçus peuvent couper une ligne n'importe où : la fin non
+/// terminée est conservée pour le prochain appel.
+#[cfg(unix)]
+#[derive(Default)]
+struct ScpProgressParser {
+    pending: String,
+}
+
+#[cfg(unix)]
+impl ScpProgressParser {
+    /// Borne du tampon si la sortie ne contient jamais de fin de ligne.
+    const MAX_PENDING: usize = 4096;
+
+    /// Ajoute `bytes` et renvoie le dernier pourcentage lisible, s'il y en a un.
+    fn feed(&mut self, bytes: &[u8]) -> Option<u8> {
+        self.pending.push_str(&String::from_utf8_lossy(bytes));
+        let text = std::mem::take(&mut self.pending);
+        let mut latest = None;
+        let mut segments = text.split(['\r', '\n']).peekable();
+        while let Some(segment) = segments.next() {
+            if let Some(pct) = Self::percent_in(segment) {
+                latest = Some(pct);
+            }
+            if segments.peek().is_none() && segment.len() <= Self::MAX_PENDING {
+                self.pending = segment.to_string();
+            }
+        }
+        latest
+    }
+
+    /// Dernier jeton `N%` (0–100) de la ligne, hors dernier jeton : dans la
+    /// vraie ligne, le pourcentage est toujours suivi de la taille et du
+    /// débit, ce qui écarte un nom de fichier ou une ligne encore tronquée.
+    fn percent_in(segment: &str) -> Option<u8> {
+        let tokens: Vec<&str> = segment.split_whitespace().collect();
+        let candidates = &tokens[..tokens.len().saturating_sub(1)];
+        candidates.iter().rev().find_map(|t| {
+            t.strip_suffix('%')
+                .filter(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+                .and_then(|n| n.parse::<u8>().ok())
+                .filter(|p| *p <= 100)
+        })
+    }
+}
+
+/// Lance `cmd` avec sa sortie standard sur un pseudo-terminal dont il est le
+/// processus de premier plan — condition pour que `scp` affiche son progress
+/// meter — et relaie les pourcentages lus en [`ScpEvent::Progress`].
+///
+/// La sortie d'erreur reste un pipe, renvoyée avec le statut de sortie.
+/// Le processus est tué si le `Receiver` est droppé (transfert annulé côté TUI).
+#[cfg(unix)]
+fn run_with_progress_pty(
+    mut cmd: std::process::Command,
+    tx: &mpsc::Sender<ScpEvent>,
+) -> Result<(std::process::ExitStatus, String)> {
+    use std::io::Read as _;
+    use std::os::unix::io::AsRawFd;
+    use std::os::unix::process::CommandExt;
+    use std::process::Stdio;
+
+    // Largeur confortable : le progress meter tronque le nom de fichier, pas
+    // les colonnes chiffrées.
+    let winsize = nix::pty::Winsize {
+        ws_row: 24,
+        ws_col: 200,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
+    let pty = nix::pty::openpty(Some(&winsize), None)
+        .map_err(|e| anyhow::anyhow!("création du pty pour scp : {e}"))?;
+
+    cmd.stdin(Stdio::null())
+        .stdout(Stdio::from(pty.slave))
+        .stderr(Stdio::piped());
+    // Nouvelle session dont le pty devient le terminal de contrôle : scp
+    // vérifie `getpgrp() == tcgetpgrp(stdout)` avant d'afficher sa progression.
+    unsafe {
+        cmd.pre_exec(|| {
+            if libc::setsid() < 0 || libc::ioctl(libc::STDOUT_FILENO, libc::TIOCSCTTY as _, 0) < 0 {
+                return Err(std::io::Error::last_os_error());
+            }
+            Ok(())
+        });
+    }
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| anyhow::anyhow!("lancement de scp : {e}"))?;
+    // Ferme la copie de l'esclave détenue par `cmd` : sans elle, la lecture
+    // du maître ne verrait jamais la fin de sortie.
+    drop(cmd);
+
+    let mut master = std::fs::File::from(pty.master);
+    let master_fd = master.as_raw_fd();
+    let mut parser = ScpProgressParser::default();
+    let mut buf = [0u8; 4096];
+    let mut progress: u8 = 0;
+    let mut master_open = true;
+
+    let status = loop {
+        if master_open {
+            let mut pollfd = libc::pollfd {
+                fd: master_fd,
+                events: libc::POLLIN,
+                revents: 0,
+            };
+            let rc = unsafe { libc::poll(&mut pollfd, 1, 200) };
+            if rc > 0 {
+                if pollfd.revents & libc::POLLIN != 0 {
+                    match master.read(&mut buf) {
+                        // EIO (Linux) quand plus aucun processus ne tient l'esclave.
+                        Ok(0) | Err(_) => master_open = false,
+                        Ok(n) => {
+                            if let Some(pct) = parser.feed(&buf[..n]) {
+                                progress = pct;
+                            }
+                        }
+                    }
+                } else if pollfd.revents & (libc::POLLHUP | libc::POLLERR) != 0 {
+                    master_open = false;
+                }
+            }
+        } else {
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+
+        if let Some(status) = child.try_wait()? {
+            break status;
+        }
+        // Sert aussi de sonde d'annulation : échoue si la TUI a abandonné.
+        if tx.send(ScpEvent::Progress(progress)).is_err() {
+            let _ = child.kill();
+            let _ = child.wait();
+            anyhow::bail!("transfert annulé");
+        }
+    };
+
+    let mut stderr = String::new();
+    if let Some(mut err) = child.stderr.take() {
+        let _ = err.read_to_string(&mut stderr);
+    }
+    Ok((status, stderr))
+}
+
 /// Transfert via Wallix en déléguant au binaire `scp` système.
 ///
-/// Le processus est tué si le `Receiver` est droppé (transfert annulé côté TUI).
+/// `scp` tourne sur un pseudo-terminal pour que son progress meter alimente
+/// la barre de progression. Le processus est tué si le `Receiver` est droppé
+/// (transfert annulé côté TUI).
 #[cfg(unix)]
 fn transfer_wallix_scp(
     server: &ResolvedServer,
@@ -367,8 +516,7 @@ fn transfer_wallix_scp(
     remote: &str,
     tx: &mpsc::Sender<ScpEvent>,
 ) -> Result<()> {
-    use std::io::Read as _;
-    use std::process::{Command, Stdio};
+    use std::process::Command;
 
     if *direction == ScpDirection::Upload {
         let size = std::fs::metadata(local).map(|m| m.len()).unwrap_or(0);
@@ -388,36 +536,15 @@ fn transfer_wallix_scp(
             ScpDirection::Download => args[n - 2].clone(),
         };
 
-        let mut child = Command::new("scp")
-            .args(&args)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map_err(|e| anyhow::anyhow!("lancement de scp : {e}"))?;
-
-        let status = loop {
-            if let Some(status) = child.try_wait()? {
-                break status;
-            }
-            // Sonde d'annulation : échoue si la TUI a abandonné le transfert.
-            if tx.send(ScpEvent::Progress(0)).is_err() {
-                let _ = child.kill();
-                let _ = child.wait();
-                anyhow::bail!("transfert annulé");
-            }
-            std::thread::sleep(std::time::Duration::from_millis(200));
-        };
+        let mut cmd = Command::new("scp");
+        cmd.args(&args);
+        let (status, stderr) = run_with_progress_pty(cmd, tx)?;
 
         if status.success() {
             let _ = tx.send(ScpEvent::Progress(100));
             return Ok(());
         }
 
-        let mut stderr = String::new();
-        if let Some(mut err) = child.stderr.take() {
-            let _ = err.read_to_string(&mut stderr);
-        }
         if crate::wallix::is_invalid_target(&stderr) {
             refused.push(endpoint);
             continue;
@@ -837,6 +964,105 @@ scp: Connection closed\n";
     #[cfg(unix)]
     fn scp_stderr_summary_keeps_raw_when_only_noise() {
         assert_eq!(scp_stderr_summary("** WARNING: x\n"), "** WARNING: x");
+    }
+
+    /// Ligne du progress meter d'OpenSSH, rafraîchie par `\r`.
+    #[test]
+    #[cfg(unix)]
+    fn scp_progress_parses_meter_line() {
+        let mut p = ScpProgressParser::default();
+        assert_eq!(
+            p.feed(b"\rbackup.tar.gz                  42%  420MB  12.3MB/s   00:47 ETA"),
+            Some(42)
+        );
+    }
+
+    /// Plusieurs rafraîchissements dans un même chunk : le dernier l'emporte.
+    #[test]
+    #[cfg(unix)]
+    fn scp_progress_keeps_latest_update() {
+        let mut p = ScpProgressParser::default();
+        let chunk = b"\rf.bin   10%  1MB 1.0MB/s 00:09 ETA\rf.bin   20%  2MB 1.0MB/s 00:08 ETA";
+        assert_eq!(p.feed(chunk), Some(20));
+    }
+
+    /// Ligne finale terminée par `\r\n` (onlcr du pty).
+    #[test]
+    #[cfg(unix)]
+    fn scp_progress_parses_final_line() {
+        let mut p = ScpProgressParser::default();
+        assert_eq!(
+            p.feed(b"\rf.bin  100%   10MB  5.0MB/s   00:02    \r\n"),
+            Some(100)
+        );
+    }
+
+    /// Une ligne coupée entre deux lectures n'émet rien tant que le
+    /// pourcentage n'est pas suivi d'autre chose.
+    #[test]
+    #[cfg(unix)]
+    fn scp_progress_handles_split_chunks() {
+        let mut p = ScpProgressParser::default();
+        assert_eq!(p.feed(b"\rf.bin   1"), None);
+        assert_eq!(p.feed(b"5%"), None);
+        assert_eq!(p.feed(b"  1MB 1.0MB/s 00:09 ETA"), Some(15));
+    }
+
+    /// Un nom de fichier qui ressemble à un pourcentage n'est pas pris pour
+    /// la progression.
+    #[test]
+    #[cfg(unix)]
+    fn scp_progress_ignores_percent_in_filename() {
+        let mut p = ScpProgressParser::default();
+        assert_eq!(p.feed(b"\r99%"), None);
+        assert_eq!(p.feed(b"   7%  1MB 1.0MB/s 00:09 ETA"), Some(7));
+    }
+
+    /// Sortie sans progress meter (bannière, texte libre) : rien.
+    #[test]
+    #[cfg(unix)]
+    fn scp_progress_ignores_unrelated_output() {
+        let mut p = ScpProgressParser::default();
+        assert_eq!(p.feed(b"Welcome to the bastion\r\n"), None);
+        assert_eq!(p.feed(b"\rf.bin  250%  x y z"), None);
+    }
+
+    /// Bout en bout : un faux `scp` qui écrit un progress meter seulement si
+    /// sa sortie est un terminal au premier plan (comme OpenSSH) est bien lu.
+    #[test]
+    #[cfg(unix)]
+    fn run_with_progress_pty_reads_meter_from_tty_child() {
+        let script = r#"[ -t 1 ] || exit 3
+[ "$(ps -o tpgid= -p $$ | tr -d ' ')" = "$(ps -o pgid= -p $$ | tr -d ' ')" ] || exit 4
+printf '\rf.bin   30%%  3MB 1MB/s 00:07 ETA'
+sleep 0.3
+printf '\rf.bin  100%%  10MB 1MB/s 00:00    \n'"#;
+        let (tx, rx) = mpsc::channel();
+        let mut cmd = std::process::Command::new("sh");
+        cmd.args(["-c", script]);
+        let (status, _stderr) = run_with_progress_pty(cmd, &tx).unwrap();
+        assert!(status.success(), "{status}");
+        let seen: Vec<u8> = rx
+            .try_iter()
+            .filter_map(|e| match e {
+                ScpEvent::Progress(p) => Some(p),
+                _ => None,
+            })
+            .collect();
+        assert!(seen.contains(&30), "{seen:?}");
+        assert_eq!(seen.last(), Some(&100), "{seen:?}");
+    }
+
+    /// La sortie d'erreur reste capturée séparément.
+    #[test]
+    #[cfg(unix)]
+    fn run_with_progress_pty_captures_stderr() {
+        let (tx, _rx) = mpsc::channel();
+        let mut cmd = std::process::Command::new("sh");
+        cmd.args(["-c", "echo 'Permission denied' >&2; exit 1"]);
+        let (status, stderr) = run_with_progress_pty(cmd, &tx).unwrap();
+        assert!(!status.success());
+        assert!(stderr.contains("Permission denied"), "{stderr}");
     }
 
     /// Serveur Wallix type : groupe YAML `Colibris`, env `PR`, groupe Wallix
