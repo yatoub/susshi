@@ -1248,7 +1248,7 @@
 <ul>
 <li>Authorizations come from the configuration (<code>wallix.authorization</code>, then <code>wallix.authorizations</code>), tried in order while Wallix answers <code>Cible invalide</code>; the name derived from the YAML structure (<code>&lt;ENV&gt;-&lt;GROUP&gt;_&lt;group&gt;</code>) is only a last resort. See <a href="../wallix/#declaring-authorizations-recommended">Wallix Guide</a>.</li>
 <li>Agent forwarding (<code>-A</code>) lets the bastion authenticate on the target with your SSH agent: your key must be loaded in the agent (<code>ssh-add -l</code>). No password prompt is possible (<code>BatchMode</code>).</li>
-<li>Progress is only reported when the transfer ends.</li>
+<li><code>scp</code> runs on a pseudo-terminal so its progress meter drives the progress bar. On download the file size is unknown: only the percentage is shown, without size, speed or ETA.</li>
 <li>On failure, the error shows the <code>scp</code> message (without OpenSSH warnings) and the exact target used, to compare with a manual <code>scp</code>.</li>
 </ul>
 <h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
