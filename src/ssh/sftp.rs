@@ -416,7 +416,6 @@ fn run_with_progress_pty(
     tx: &mpsc::Sender<ScpEvent>,
 ) -> Result<(std::process::ExitStatus, String)> {
     use std::io::Read as _;
-    use std::os::unix::io::AsRawFd;
     use std::os::unix::process::CommandExt;
     use std::process::Stdio;
 
@@ -452,35 +451,13 @@ fn run_with_progress_pty(
     drop(cmd);
 
     let mut master = std::fs::File::from(pty.master);
-    let master_fd = master.as_raw_fd();
     let mut parser = ScpProgressParser::default();
-    let mut buf = [0u8; 4096];
     let mut progress: u8 = 0;
     let mut master_open = true;
 
     let status = loop {
         if master_open {
-            let mut pollfd = libc::pollfd {
-                fd: master_fd,
-                events: libc::POLLIN,
-                revents: 0,
-            };
-            let rc = unsafe { libc::poll(&mut pollfd, 1, 200) };
-            if rc > 0 {
-                if pollfd.revents & libc::POLLIN != 0 {
-                    match master.read(&mut buf) {
-                        // EIO (Linux) quand plus aucun processus ne tient l'esclave.
-                        Ok(0) | Err(_) => master_open = false,
-                        Ok(n) => {
-                            if let Some(pct) = parser.feed(&buf[..n]) {
-                                progress = pct;
-                            }
-                        }
-                    }
-                } else if pollfd.revents & (libc::POLLHUP | libc::POLLERR) != 0 {
-                    master_open = false;
-                }
-            }
+            master_open = pump_pty(&mut master, 200, &mut parser, &mut progress) != PtyRead::Closed;
         } else {
             std::thread::sleep(std::time::Duration::from_millis(200));
         }
@@ -496,11 +473,68 @@ fn run_with_progress_pty(
         }
     };
 
+    // Le processus a pu écrire ses dernières lignes (100 %) juste avant de
+    // sortir : on vide le pty avant de conclure.
+    while master_open && pump_pty(&mut master, 50, &mut parser, &mut progress) == PtyRead::Data {}
+    let _ = tx.send(ScpEvent::Progress(progress));
+
     let mut stderr = String::new();
     if let Some(mut err) = child.stderr.take() {
         let _ = err.read_to_string(&mut stderr);
     }
     Ok((status, stderr))
+}
+
+/// Résultat d'une lecture du maître du pty.
+#[cfg(unix)]
+#[derive(Debug, PartialEq, Eq)]
+enum PtyRead {
+    /// Des octets ont été lus.
+    Data,
+    /// Rien à lire avant l'expiration du délai.
+    Idle,
+    /// Plus aucun processus ne tient l'esclave.
+    Closed,
+}
+
+/// Attend au plus `timeout_ms` des octets sur `master` et met à jour
+/// `progress` avec le dernier pourcentage lu.
+#[cfg(unix)]
+fn pump_pty(
+    master: &mut std::fs::File,
+    timeout_ms: libc::c_int,
+    parser: &mut ScpProgressParser,
+    progress: &mut u8,
+) -> PtyRead {
+    use std::io::Read as _;
+    use std::os::unix::io::AsRawFd;
+
+    let mut pollfd = libc::pollfd {
+        fd: master.as_raw_fd(),
+        events: libc::POLLIN,
+        revents: 0,
+    };
+    let rc = unsafe { libc::poll(&mut pollfd, 1, timeout_ms) };
+    if rc <= 0 {
+        return PtyRead::Idle;
+    }
+    if pollfd.revents & libc::POLLIN != 0 {
+        let mut buf = [0u8; 4096];
+        return match master.read(&mut buf) {
+            // EIO (Linux) quand plus aucun processus ne tient l'esclave.
+            Ok(0) | Err(_) => PtyRead::Closed,
+            Ok(n) => {
+                if let Some(pct) = parser.feed(&buf[..n]) {
+                    *progress = pct;
+                }
+                PtyRead::Data
+            }
+        };
+    }
+    if pollfd.revents & (libc::POLLHUP | libc::POLLERR) != 0 {
+        return PtyRead::Closed;
+    }
+    PtyRead::Idle
 }
 
 /// Transfert via Wallix en déléguant au binaire `scp` système.
@@ -1051,6 +1085,25 @@ printf '\rf.bin  100%%  10MB 1MB/s 00:00    \n'"#;
             .collect();
         assert!(seen.contains(&30), "{seen:?}");
         assert_eq!(seen.last(), Some(&100), "{seen:?}");
+    }
+
+    /// La dernière ligne écrite juste avant la sortie du processus n'est pas
+    /// perdue (le pty est vidé après `try_wait`).
+    #[test]
+    #[cfg(unix)]
+    fn run_with_progress_pty_reads_output_written_right_before_exit() {
+        for _ in 0..20 {
+            let (tx, rx) = mpsc::channel();
+            let mut cmd = std::process::Command::new("sh");
+            cmd.args(["-c", r"printf '\rf.bin  100%%  1MB 1MB/s 00:00    \n'"]);
+            let (status, _) = run_with_progress_pty(cmd, &tx).unwrap();
+            assert!(status.success(), "{status}");
+            let last = rx.try_iter().fold(None, |acc, e| match e {
+                ScpEvent::Progress(p) => Some(p),
+                _ => acc,
+            });
+            assert_eq!(last, Some(100));
+        }
     }
 
     /// La sortie d'erreur reste capturée séparément.
