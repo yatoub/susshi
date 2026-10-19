@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.25.1] — 2026-10-19
+
+### Fixed
+
+- Show scp progress for Wallix transfers ([#228](https://github.com/yatoub/susshi/pull/228))
+
+
 ## [0.25.0] — 2026-10-15
 
 ### Added
