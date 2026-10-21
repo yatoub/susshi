@@ -15,6 +15,22 @@ impl App {
         }
     }
 
+    /// Indique si un overlay modal (popup) est affiché par-dessus la liste.
+    ///
+    /// Tant que c'est le cas, les clics souris ne doivent pas modifier la
+    /// sélection : plusieurs popups (SCP, commande ad-hoc…) agissent sur le
+    /// serveur sélectionné au moment de la validation.
+    pub fn has_modal_overlay(&self) -> bool {
+        !matches!(self.wizard_state, WizardState::Idle)
+            || self.app_mode != AppMode::Normal
+            || matches!(self.cmd_state, CmdState::Prompting(_))
+            || !matches!(self.scp_state, ScpState::Idle | ScpState::Running { .. })
+            || self.wallix_selector.is_some()
+            || self.tunnel_overlay.is_some()
+            || self.overview.is_some()
+            || self.show_help
+    }
+
     /// Affiche un message temporaire dans la barre de statut.
     pub fn set_status_message(&mut self, msg: impl Into<String>) {
         self.status_message = Some((msg.into(), Instant::now()));

@@ -40,6 +40,12 @@ pub fn is_in_rect(x: u16, y: u16, rect: Rect) -> bool {
 }
 
 pub fn handle_mouse_event(mouse: MouseEvent, app: &mut App, size: Rect) -> io::Result<bool> {
+    // Un popup est ouvert : ignorer le clic pour ne pas changer la sélection
+    // sous l'overlay (ex. SCP qui partirait vers un autre serveur).
+    if app.has_modal_overlay() {
+        return Ok(false);
+    }
+
     let layout = get_layout(size);
 
     if is_in_rect(mouse.column, mouse.row, layout.tabs_area) {

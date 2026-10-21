@@ -16,6 +16,7 @@ Mouse:
 
 - Click: select item.
 - Double-click: connect.
+- Clicks are ignored while a popup is open (SCP, command prompt, tunnels, help, …), so the selected server cannot change under an open form.
 
 ## Search and Filters
 
