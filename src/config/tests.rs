@@ -974,6 +974,74 @@ groups: []
     assert_eq!(sub_srv.port, 2222);
 }
 
+/// Un fichier inclus peut ne surcharger qu'un champ du bloc `wallix` (ex. `group`)
+/// sans perdre `host`/`user` définis dans le fichier principal — y compris pour
+/// ses propres sous-includes.
+#[test]
+fn test_includes_merge_defaults_wallix_field_by_field() {
+    let leaf_yaml = r#"
+groups:
+  - name: Leaf
+    servers:
+      - name: leaf_srv
+        host: "203.0.113.20"
+"#;
+    let leaf_file = write_temp_yaml(leaf_yaml);
+
+    let sub_yaml = format!(
+        r#"
+defaults:
+  wallix:
+    group: "sub-admins"
+includes:
+  - label: "LEAF"
+    path: "{}"
+    merge_defaults: true
+groups:
+  - name: Sub
+    servers:
+      - name: sub_srv
+        host: "203.0.113.21"
+"#,
+        leaf_file.path().to_string_lossy()
+    );
+    let sub_file = write_temp_yaml(&sub_yaml);
+
+    let main_yaml = format!(
+        r#"
+defaults:
+  mode: "wallix"
+  wallix:
+    host: "bastion.example.com"
+    user: "buser"
+includes:
+  - label: "SUB"
+    path: "{}"
+    merge_defaults: true
+groups:
+  - name: Main
+    servers:
+      - name: main_srv
+        host: "203.0.113.22"
+"#,
+        sub_file.path().to_string_lossy()
+    );
+    let main_file = write_temp_yaml(&main_yaml);
+
+    let (config, _warnings, _val) =
+        Config::load_merged(main_file.path(), &mut std::collections::HashSet::new(), 0).unwrap();
+    let resolved = config.resolve().unwrap();
+
+    for name in ["sub_srv", "leaf_srv"] {
+        let srv = resolved.iter().find(|s| s.name == name).unwrap();
+        assert_eq!(srv.bastion_host.as_deref(), Some("bastion.example.com"));
+        assert_eq!(srv.bastion_user.as_deref(), Some("buser"));
+        assert_eq!(srv.wallix_group.as_deref(), Some("sub-admins"), "{name}");
+    }
+    let main_srv = resolved.iter().find(|s| s.name == "main_srv").unwrap();
+    assert_eq!(main_srv.wallix_group, None);
+}
+
 /// Les defaults du fichier principal sont automatiquement hérités par les
 /// namespaces inclus, même sans `merge_defaults: true`.
 #[test]
