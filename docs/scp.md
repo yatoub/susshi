@@ -55,4 +55,5 @@ scp -A … user@target+SSH+AUTHORIZATION+bastion_user@bastion:path
 ## Notes
 
 - The transfer uses the same SSH parameters as the selected server (key, port, jump, agent socket, `ssh_options` in Wallix mode).
+- The target server is the one selected when the form is submitted. Mouse clicks are ignored while the SCP popup is open, so the selection cannot change behind the form.
 - For large or automated transfers, use `rsync` or `scp` directly with the SSH command copied via `y`.

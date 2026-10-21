@@ -80,3 +80,5 @@ Common terminals with truecolor: Alacritty, kitty, WezTerm, iTerm2, modern GNOME
 ### Mouse click does not work
 
 Press `M` to toggle mouse capture. When mouse capture is disabled, terminal text selection works normally but TUI click events are not processed.
+
+Clicks are also ignored on purpose while a popup is open (SCP form, command prompt, tunnels, help, overview, …). Close the popup first.

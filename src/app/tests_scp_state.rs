@@ -414,3 +414,65 @@ fn poll_scp_events_error_transitions_to_error() {
     assert!(matches!(app.scp_state, ScpState::Error(_)));
     assert!(app.scp_rx.is_none());
 }
+
+// ── blocage souris quand un overlay est ouvert ───────────────────────────────
+
+fn click_on_list_row(row: u16) -> crossterm::event::MouseEvent {
+    crossterm::event::MouseEvent {
+        kind: crossterm::event::MouseEventKind::Down(crossterm::event::MouseButton::Left),
+        column: 5,
+        row,
+        modifiers: crossterm::event::KeyModifiers::NONE,
+    }
+}
+
+#[test]
+fn has_modal_overlay_false_in_normal_state() {
+    let app = make_app_with_server();
+    assert!(!app.has_modal_overlay());
+}
+
+#[test]
+fn has_modal_overlay_true_when_scp_form_open() {
+    let mut app = make_app_with_server();
+    app.open_scp_select_direction();
+    assert!(app.has_modal_overlay());
+    app.scp_select_direction(ScpDirection::Upload);
+    assert!(app.has_modal_overlay());
+}
+
+#[test]
+fn has_modal_overlay_true_for_cmd_prompt_and_help() {
+    let mut app = make_app_with_server();
+    app.cmd_state = CmdState::Prompting(String::new());
+    assert!(app.has_modal_overlay());
+    app.cmd_state = CmdState::Idle;
+    app.show_help = true;
+    assert!(app.has_modal_overlay());
+}
+
+#[test]
+fn mouse_click_changes_selection_without_overlay() {
+    let mut app = make_app_with_server();
+    let size = ratatui::layout::Rect::new(0, 0, 120, 40);
+    let list = crate::handlers::get_layout(size).list_area;
+    // Ligne 0 de la liste = en-tête du groupe.
+    let handled =
+        crate::handlers::handle_mouse_event(click_on_list_row(list.y + 1), &mut app, size).unwrap();
+    assert!(handled);
+    assert_eq!(app.selected_index, 0);
+}
+
+#[test]
+fn mouse_click_ignored_while_scp_overlay_open() {
+    let mut app = make_app_with_server();
+    app.open_scp_select_direction();
+    app.scp_select_direction(ScpDirection::Upload);
+    let size = ratatui::layout::Rect::new(0, 0, 120, 40);
+    let list = crate::handlers::get_layout(size).list_area;
+    let handled =
+        crate::handlers::handle_mouse_event(click_on_list_row(list.y + 1), &mut app, size).unwrap();
+    assert!(!handled);
+    assert_eq!(app.selected_index, 1);
+    assert!(matches!(app.scp_state, ScpState::FillingForm { .. }));
+}
