@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.25.3] — 2026-10-21
+
+### Fixed
+
+- Ignore mouse clicks while a popup is open ([#232](https://github.com/yatoub/susshi/pull/232))
+
+
 ## [0.25.2] — 2026-10-21
 
 ### Fixed
