@@ -1,3 +1,4 @@
+use super::resolve::merge_bastion;
 use super::*;
 
 /// Remplace les occurrences `{{ var }}` dans `s` par les valeurs de `vars`.
@@ -92,7 +93,7 @@ pub(crate) fn merge_default_structs(base: &Defaults, overrides: &Defaults) -> De
             .ssh_options
             .clone()
             .or_else(|| base.ssh_options.clone()),
-        wallix: overrides.wallix.clone().or_else(|| base.wallix.clone()),
+        wallix: merge_bastion(&base.wallix, &overrides.wallix),
         jump: overrides.jump.clone().or_else(|| base.jump.clone()),
         use_system_ssh_config: overrides
             .use_system_ssh_config

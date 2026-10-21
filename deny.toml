@@ -4,6 +4,11 @@ targets = []
 [advisories]
 version = 2
 yanked = "deny"
+ignore = [
+    # basic-toml unmaintained — pulled by i18n-config (latest 0.4.8), only used at
+    # compile time by the `fl!` macro to read i18n.toml. No upgrade available upstream.
+    { id = "RUSTSEC-2026-0374", reason = "build-time only via i18n-config, no upstream fix" },
+]
 
 [licenses]
 version = 2

@@ -102,6 +102,32 @@ Fields:
 - `path`: absolute path, `~`-expanded path, or a `https://` / `http://` URL.
 - `merge_defaults` (optional, default: `false`): merge main-file defaults as base values for the included file.
 
+The `wallix` block of an included file's `defaults` is merged field by field with the
+main file's one. An include can therefore set only the Wallix group for its perimeter
+(and its own sub-includes) while inheriting the bastion `host` / `user` from the main file:
+
+```yaml
+# ~/.susshi.yml
+defaults:
+  mode: "wallix"
+  wallix:
+    host: "bastion.example.com"
+    user: "jdoe"
+includes:
+  - label: "TEAM A"
+    path: "~/.susshi_team_a.yml"
+    merge_defaults: true
+```
+
+```yaml
+# ~/.susshi_team_a.yml
+defaults:
+  wallix:
+    group: "team-a-admins"   # host/user inherited from ~/.susshi.yml
+groups:
+  - ...
+```
+
 ### HTTPS includes
 
 `path` can be a full HTTPS URL. susshi will fetch the file over TLS at startup:
