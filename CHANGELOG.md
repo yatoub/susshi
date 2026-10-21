@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.25.2] — 2026-10-21
+
+### Fixed
+
+- Merge included wallix defaults field by field ([#230](https://github.com/yatoub/susshi/pull/230))
+
+
 ## [0.25.1] — 2026-10-19
 
 ### Fixed
