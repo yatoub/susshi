@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.25.4] — 2026-11-09
+
+### Fixed
+
+- Bump yanked clipboard-win and vulnerable libz-sys ([#242](https://github.com/yatoub/susshi/pull/242))
+
+
 ## [0.25.3] — 2026-10-21
 
 ### Fixed
