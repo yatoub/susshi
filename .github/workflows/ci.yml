@@ -277,7 +277,7 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             openssl_mode: vendored
-          - os: macos-14
+          - os: macos-15
             target: aarch64-apple-darwin
             openssl_mode: system
           - os: ubuntu-22.04-arm
