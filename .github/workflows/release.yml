@@ -200,7 +200,9 @@ jobs:
 
   publish-apt:
     name: Publish APT repository
-    runs-on: ubuntu-latest
+    # Pinned (not ubuntu-latest): the package versions installed below only
+    # exist in the 24.04 archive. ubuntu-latest moving to 26.04 broke v0.25.4.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: [build-deb]
     # Also run on a manual re-publish (workflow_dispatch): that's precisely
@@ -456,7 +458,9 @@ jobs:
 
   publish-rpm:
     name: Publish RPM repository
-    runs-on: ubuntu-latest
+    # Pinned (not ubuntu-latest): the package versions installed below only
+    # exist in the 24.04 archive. ubuntu-latest moving to 26.04 broke v0.25.4.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: [build-rpm]
     # Also run on a manual re-publish (workflow_dispatch): that's precisely
