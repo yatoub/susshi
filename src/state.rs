@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -104,9 +104,19 @@ pub struct TunnelOverride {
     pub hidden: bool,
 }
 
+/// Version courante du format de `~/.susshi_state.json`.
+///
+/// À incrémenter à chaque changement incompatible du format ; un fichier sans
+/// champ `version` est considéré comme antérieur au versionnement (v0) et
+/// migré à la volée.
+pub const STATE_VERSION: u32 = 1;
+
 /// État persistant de l'application (sauvegardé dans ~/.susshi_state.json).
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AppState {
+    /// Version du format du fichier (`0` si absente : fichier antérieur au versionnement).
+    #[serde(default)]
+    pub version: u32,
     /// Clés des groupes/environnements actuellement développés ("Group:foo", "Env:foo:bar").
     pub expanded_items: HashSet<String>,
     /// Horodatage Unix (secondes) de la dernière connexion SSH réussie, indexé
@@ -128,25 +138,57 @@ pub struct AppState {
     pub command_history: Vec<String>,
 }
 
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            version: STATE_VERSION,
+            expanded_items: HashSet::new(),
+            last_seen: HashMap::new(),
+            favorites: HashSet::new(),
+            sort_by_recent: false,
+            tunnel_overrides: Vec::new(),
+            command_history: Vec::new(),
+        }
+    }
+}
+
 fn state_path() -> PathBuf {
     let raw = shellexpand::tilde("~/.susshi_state.json");
     PathBuf::from(raw.as_ref())
 }
 
 /// Charge l'état depuis `~/.susshi_state.json`.
-/// Retourne un `AppState` par défaut si le fichier est absent ou invalide.
+/// Retourne un `AppState` par défaut si le fichier est absent, illisible ou
+/// d'une version plus récente ; dans ces deux derniers cas le fichier d'origine
+/// est conservé en `.json.bak` pour ne pas être écrasé à la prochaine sauvegarde.
 pub fn load_state() -> AppState {
-    let path = state_path();
-    let Ok(content) = fs::read_to_string(&path) else {
-        return AppState::default();
-    };
-    serde_json::from_str(&content).unwrap_or_default()
+    load_state_from(&state_path())
 }
 
 /// Persiste l'état dans `~/.susshi_state.json`.
 /// Les erreurs d'écriture sont silencieuses (non bloquantes).
 pub fn save_state(state: &AppState) {
-    let path = state_path();
+    save_state_to(&state_path(), state);
+}
+
+fn load_state_from(path: &Path) -> AppState {
+    let Ok(content) = fs::read_to_string(path) else {
+        return AppState::default();
+    };
+    match serde_json::from_str::<AppState>(&content) {
+        Ok(mut state) if state.version <= STATE_VERSION => {
+            // v0 → v1 : seul le champ `version` a été ajouté.
+            state.version = STATE_VERSION;
+            state
+        }
+        _ => {
+            let _ = fs::write(path.with_extension("json.bak"), &content);
+            AppState::default()
+        }
+    }
+}
+
+fn save_state_to(path: &Path, state: &AppState) {
     if let Ok(json) = serde_json::to_string_pretty(state) {
         let _ = fs::write(path, json);
     }
@@ -277,5 +319,73 @@ mod tests {
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].user_idx, 0);
         assert_eq!(result[1].user_idx, 1);
+    }
+
+    fn state_file(dir: &tempfile::TempDir) -> PathBuf {
+        dir.path().join("state.json")
+    }
+
+    #[test]
+    fn load_missing_file_returns_default_at_current_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = load_state_from(&state_file(&dir));
+        assert_eq!(state.version, STATE_VERSION);
+        assert!(state.favorites.is_empty());
+    }
+
+    #[test]
+    fn load_legacy_unversioned_file_migrates_and_keeps_data() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = state_file(&dir);
+        fs::write(
+            &path,
+            r#"{"expanded_items":["Group:a"],"favorites":["Group:a:Server:s"]}"#,
+        )
+        .unwrap();
+        let state = load_state_from(&path);
+        assert_eq!(state.version, STATE_VERSION);
+        assert!(state.expanded_items.contains("Group:a"));
+        assert!(state.favorites.contains("Group:a:Server:s"));
+        assert!(!path.with_extension("json.bak").exists());
+    }
+
+    #[test]
+    fn save_then_load_roundtrip_writes_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = state_file(&dir);
+        let mut state = AppState::default();
+        state.favorites.insert("Group:g:Server:s".into());
+        save_state_to(&path, &state);
+        let raw = fs::read_to_string(&path).unwrap();
+        assert!(raw.contains(&format!("\"version\": {STATE_VERSION}")));
+        let loaded = load_state_from(&path);
+        assert!(loaded.favorites.contains("Group:g:Server:s"));
+    }
+
+    #[test]
+    fn load_corrupt_file_is_backed_up_not_lost() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = state_file(&dir);
+        fs::write(&path, "{ not json").unwrap();
+        let state = load_state_from(&path);
+        assert!(state.favorites.is_empty());
+        let bak = path.with_extension("json.bak");
+        assert_eq!(fs::read_to_string(bak).unwrap(), "{ not json");
+    }
+
+    #[test]
+    fn load_newer_version_is_backed_up_not_overwritten() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = state_file(&dir);
+        let content = format!(
+            r#"{{"version":{},"favorites":["Group:x:Server:y"]}}"#,
+            STATE_VERSION + 1
+        );
+        fs::write(&path, &content).unwrap();
+        let state = load_state_from(&path);
+        assert!(state.favorites.is_empty());
+        assert_eq!(state.version, STATE_VERSION);
+        let bak = path.with_extension("json.bak");
+        assert_eq!(fs::read_to_string(bak).unwrap(), content);
     }
 }

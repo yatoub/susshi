@@ -6,6 +6,7 @@ impl App {
         let mut history = self.cmd_history.clone();
         history.truncate(100);
         crate::state::AppState {
+            version: crate::state::STATE_VERSION,
             expanded_items: self.expanded_items.clone(),
             last_seen: self.last_seen.clone(),
             favorites: self.favorites.clone(),
