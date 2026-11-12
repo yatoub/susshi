@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.0] — 2026-11-12
+
+### Added
+
+- Prepare the 1.0.0 stable release ([#247](https://github.com/yatoub/susshi/pull/247)) (**BREAKING**)
+
+
 ## [0.25.4] — 2026-11-09
 
 ### Fixed
