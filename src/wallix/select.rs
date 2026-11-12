@@ -4,7 +4,7 @@ use super::*;
 ///
 /// This function implements the core selection algorithm:
 /// 1. Filter entries by exact target match (user@account@host:protocol).
-/// 2. Filter by exact group match (`wallix.group`, or legacy `wallix_group`).
+/// 2. Filter by exact group match (`wallix.group`).
 /// 3. Return error if no match or multiple matches found.
 /// 4. Return the ID if exactly one match.
 pub fn select_id_by_target_and_group(

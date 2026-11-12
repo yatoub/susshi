@@ -35,7 +35,6 @@ Fields only available in `defaults` (not overridable per group/env/server): `the
 | `ssh_options` | ✓ | ✓ | ✓ | ✓ |
 | `mode` | ✓ | ✓ | ✓ | ✓ |
 | `wallix` block | ✓ | ✓ | ✓ | ✓ |
-| `wallix_group` | — | ✓ | ✓ | ✓ |
 | `jump` | ✓ | ✓ | ✓ | ✓ |
 | `tunnels` | ✓ | ✓ | ✓ | ✓ |
 | `tags` | ✓ | ✓ | ✓ | ✓ |
@@ -188,8 +187,6 @@ wallix:
   # authorizations: ["PR-APP_{group}"]  # candidate authorizations, {group} = suffix above
   # header_columns: ["ID", "Cible", "Autorisation"]  # override if bastion uses different column labels
 ```
-
-`bastion` is accepted as a backward-compatible alias key.
 
 Wallix-specific fields:
 

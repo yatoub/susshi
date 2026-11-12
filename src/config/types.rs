@@ -8,8 +8,6 @@ pub enum ConnectionMode {
     #[default]
     Direct,
     Jump,
-    /// Anciennement `bastion` — `#[serde(alias)]` conservé pour rétrocompatibilité.
-    #[serde(alias = "bastion")]
     Wallix,
 }
 
@@ -286,7 +284,6 @@ pub struct Group {
     pub ssh_port: Option<u16>,
     pub ssh_options: Option<Vec<String>>,
     pub wallix: Option<BastionConfig>,
-    pub wallix_group: Option<String>,
     pub jump: Option<Vec<JumpConfig>>,
     pub environments: Option<Vec<Environment>>,
     pub servers: Option<Vec<Server>>,
@@ -306,7 +303,6 @@ pub struct Environment {
     pub ssh_port: Option<u16>,
     pub ssh_options: Option<Vec<String>>,
     pub wallix: Option<BastionConfig>,
-    pub wallix_group: Option<String>,
     pub jump: Option<Vec<JumpConfig>>,
     pub servers: Vec<Server>,
     pub probe_filesystems: Option<Vec<String>>,
@@ -330,7 +326,6 @@ pub struct Server {
     pub ssh_options: Option<Vec<String>>,
     pub mode: Option<ConnectionMode>,
     pub wallix: Option<BastionConfig>,
-    pub wallix_group: Option<String>,
     pub jump: Option<Vec<JumpConfig>>,
     pub probe_filesystems: Option<Vec<String>>,
     pub tunnels: Option<Vec<TunnelConfig>>,
