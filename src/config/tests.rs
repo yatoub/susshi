@@ -54,7 +54,6 @@ fn test_resolve_applies_interpolation() {
             ssh_port: None,
             ssh_options: None,
             wallix: None,
-            wallix_group: None,
             jump: None,
             probe_filesystems: None,
             environments: None,
@@ -161,7 +160,6 @@ fn test_resolve_inherits_wallix_group_from_defaults_wallix() {
             ssh_port: None,
             ssh_options: None,
             wallix: None,
-            wallix_group: None,
             jump: None,
             environments: None,
             servers: Some(vec![Server {
@@ -174,7 +172,6 @@ fn test_resolve_inherits_wallix_group_from_defaults_wallix() {
                 ssh_options: None,
                 mode: None,
                 wallix: None,
-                wallix_group: None,
                 jump: None,
                 probe_filesystems: None,
                 tunnels: None,
@@ -243,7 +240,6 @@ fn test_resolve_wallix_group_env_override_wins_over_global() {
             ssh_port: None,
             ssh_options: None,
             wallix: None,
-            wallix_group: None,
             jump: None,
             environments: Some(vec![Environment {
                 name: "PR-OND".to_string(),
@@ -256,7 +252,6 @@ fn test_resolve_wallix_group_env_override_wins_over_global() {
                     group: Some("env-admins".to_string()),
                     ..Default::default()
                 }),
-                wallix_group: None,
                 jump: None,
                 servers: vec![Server {
                     name: "db07".to_string(),
@@ -312,7 +307,6 @@ fn test_sorting_mixed() {
                 ssh_port: None,
                 ssh_options: None,
                 wallix: None,
-                wallix_group: None,
                 jump: None,
                 environments: None,
                 servers: None,
@@ -345,7 +339,6 @@ fn test_sorting_mixed() {
                 ssh_port: None,
                 ssh_options: None,
                 wallix: None,
-                wallix_group: None,
                 jump: None,
                 environments: None,
                 servers: None,
@@ -392,7 +385,6 @@ fn test_resolve_inheritance_chain() {
             ssh_port: None, // Inherits 2222
             ssh_options: None,
             wallix: None,
-            wallix_group: None,
             jump: None,
             probe_filesystems: None,
             tags: None,
@@ -405,7 +397,6 @@ fn test_resolve_inheritance_chain() {
                 ssh_port: None, // Inherits 2222
                 ssh_options: None,
                 wallix: None,
-                wallix_group: None,
                 jump: None,
                 probe_filesystems: None,
                 tunnels: None,
@@ -458,7 +449,6 @@ fn test_probe_filesystems_inheritance() {
             ssh_port: None,
             ssh_options: None,
             wallix: None,
-            wallix_group: None,
             jump: None,
             probe_filesystems: None, // hérite des defaults
             environments: None,
@@ -539,7 +529,6 @@ fn test_probe_filesystems_group_extends_defaults() {
             ssh_port: None,
             ssh_options: None,
             wallix: None,
-            wallix_group: None,
             jump: None,
             probe_filesystems: Some(vec!["/kafka_data".to_string()]), // s'ajoute
             environments: None,
@@ -1278,7 +1267,6 @@ fn make_group(name: &str, servers: Vec<Server>) -> Group {
         ssh_port: None,
         ssh_options: None,
         wallix: None,
-        wallix_group: None,
         jump: None,
         probe_filesystems: None,
         tunnels: None,
@@ -1298,7 +1286,6 @@ fn make_group_with_env(name: &str, envs: Vec<Environment>) -> Group {
         ssh_port: None,
         ssh_options: None,
         wallix: None,
-        wallix_group: None,
         jump: None,
         probe_filesystems: None,
         tunnels: None,
@@ -1318,7 +1305,6 @@ fn make_env(name: &str, servers: Vec<Server>) -> Environment {
         ssh_port: None,
         ssh_options: None,
         wallix: None,
-        wallix_group: None,
         jump: None,
         probe_filesystems: None,
         tunnels: None,
@@ -2694,5 +2680,40 @@ fn test_parse_yaml_accepts_heavy_anchor_reuse() {
         resolved
             .iter()
             .all(|s| s.probe_filesystems.contains(&"/data".to_string()))
+    );
+}
+
+#[test]
+fn test_mode_bastion_alias_is_rejected() {
+    let yaml = r#"
+defaults:
+  mode: "bastion"
+groups: []
+"#;
+    assert!(serde_saphyr::from_str::<Config>(yaml).is_err());
+}
+
+#[test]
+fn test_validation_flags_removed_wallix_group_key() {
+    let yaml = r#"
+groups:
+  - name: G
+    wallix_group: "grp"
+    environments:
+      - name: E
+        wallix_group: "grp"
+        servers:
+          - name: srv
+            host: "203.0.113.4"
+            wallix_group: "grp"
+"#;
+    let warnings = validate_yaml(yaml, "test.yml");
+    assert_eq!(
+        warnings
+            .iter()
+            .filter(|w| w.field == "wallix_group")
+            .count(),
+        3,
+        "got: {warnings:?}"
     );
 }

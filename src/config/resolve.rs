@@ -681,13 +681,11 @@ fn resolve_server(
 
     // Priorité déterministe pour le groupe Wallix:
     // 1) server.wallix.group
-    // 2) server.wallix_group (legacy)
-    // 3) héritage déjà fusionné via final_bastion.group (env/group/defaults)
+    // 2) héritage déjà fusionné via final_bastion.group (env/group/defaults)
     let resolved_wallix_group = s
         .wallix
         .as_ref()
         .and_then(|b| b.group.as_deref())
-        .or(s.wallix_group.as_deref())
         .or(final_bastion.as_ref().and_then(|b| b.group.as_deref()))
         .map(str::trim)
         .filter(|g| !g.is_empty())

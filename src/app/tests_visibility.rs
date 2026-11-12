@@ -14,7 +14,6 @@ fn create_test_config() -> Config {
             ssh_port: None,
             ssh_options: None,
             wallix: None,
-            wallix_group: None,
             jump: None,
             probe_filesystems: None,
             environments: Some(vec![Environment {
@@ -25,7 +24,6 @@ fn create_test_config() -> Config {
                 ssh_port: None,
                 ssh_options: None,
                 wallix: None,
-                wallix_group: None,
                 jump: None,
                 probe_filesystems: None,
                 tunnels: None,

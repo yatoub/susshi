@@ -13,7 +13,6 @@ fn make_simple_app() -> App {
             ssh_port: None,
             ssh_options: None,
             wallix: None,
-            wallix_group: None,
             jump: None,
             probe_filesystems: None,
             environments: None,

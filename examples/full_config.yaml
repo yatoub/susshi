@@ -83,7 +83,7 @@ defaults:
   wallix:
     host: "bastion.example.com"
     user: "bastion-user"
-    # Canonical Wallix group key (legacy wallix_group is still accepted).
+    # Wallix group used to match menu entries.
     # A short value is allowed: menu entries like PREFIX_devops-admins will match.
     group: "devops-admins"
     account: "default"

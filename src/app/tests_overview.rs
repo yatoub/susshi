@@ -13,7 +13,6 @@ fn make_app_with_group() -> App {
             ssh_port: None,
             ssh_options: None,
             wallix: None,
-            wallix_group: None,
             jump: None,
             probe_filesystems: None,
             environments: Some(vec![Environment {
@@ -24,7 +23,6 @@ fn make_app_with_group() -> App {
                 ssh_port: None,
                 ssh_options: None,
                 wallix: None,
-                wallix_group: None,
                 jump: None,
                 probe_filesystems: None,
                 tunnels: None,

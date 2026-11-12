@@ -25,12 +25,15 @@ susshi writes state to `~/.susshi_state.json` after each session. The file conta
 
 | Key | Description |
 | --- | --- |
+| `version` | Format version of the file (currently `1`); files without it are migrated automatically |
 | `favorites` | Set of server names marked as favorites |
 | `expanded_items` | Set of group/environment names that are expanded in the tree |
 | `sort_mode` | Current sort (alphabetical or recent-first) |
 | `last_seen` | Map of `server_name → ISO timestamp` of last connection |
 | `command_history` | Last 100 ad-hoc commands (deduplicated) |
 | `tunnel_overrides` | User-created or user-edited tunnels per server |
+
+If the file is corrupted, or was written by a newer susshi version, it is copied to `~/.susshi_state.json.bak` and susshi starts with a fresh state instead of silently overwriting it.
 
 To reset all state: `rm ~/.susshi_state.json`
 

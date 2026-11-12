@@ -23,7 +23,6 @@ fn make_app_with_server() -> App {
             ssh_port: None,
             ssh_options: None,
             wallix: None,
-            wallix_group: None,
             jump: None,
             probe_filesystems: None,
             environments: None,

@@ -35,7 +35,6 @@ Fields only available in `defaults` (not overridable per group/env/server): `the
 | `ssh_options` | ✓ | ✓ | ✓ | ✓ |
 | `mode` | ✓ | ✓ | ✓ | ✓ |
 | `wallix` block | ✓ | ✓ | ✓ | ✓ |
-| `wallix_group` | — | ✓ | ✓ | ✓ |
 | `jump` | ✓ | ✓ | ✓ | ✓ |
 | `tunnels` | ✓ | ✓ | ✓ | ✓ |
 | `tags` | ✓ | ✓ | ✓ | ✓ |
@@ -189,8 +188,6 @@ wallix:
   # header_columns: ["ID", "Cible", "Autorisation"]  # override if bastion uses different column labels
 ```
 
-`bastion` is accepted as a backward-compatible alias key.
-
 Wallix-specific fields:
 
 - `template` — login-string template. Default: `{target_user}@%n:SSH:{bastion_user}`.
@@ -322,3 +319,9 @@ Any level may override defaults.
 ## Complete Example
 
 See [../examples/full_config.yaml](../examples/full_config.yaml) for a complete annotated configuration.
+
+## Migrating to 1.0
+
+- `mode: bastion` is no longer accepted — use `mode: wallix`.
+- The `wallix_group` key is removed — set `group` inside the `wallix` block instead (`wallix: { group: "devops-admins" }`). Run `susshi --validate` to find leftover `wallix_group` keys, which are reported as unknown fields.
+- `~/.susshi_state.json` is now versioned. Existing files are migrated automatically; an unreadable one is kept as `~/.susshi_state.json.bak`.
