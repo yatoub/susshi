@@ -24,7 +24,7 @@
       
       
       <link rel="icon" href="../susshi.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -32,10 +32,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -803,6 +803,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#migrating-to-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migrating to 1.0
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1399,6 +1410,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#migrating-to-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migrating to 1.0
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1522,13 +1544,6 @@
 <tr>
 <td><code>wallix</code> block</td>
 <td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td><code>wallix_group</code></td>
-<td style="text-align: center;">—</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
 <td style="text-align: center;">✓</td>
@@ -1846,7 +1861,6 @@ main file's one. An include can therefore set only the Wallix group for its peri
 <a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span><span class="c1"># authorizations: ["PR-APP_{group}"]  # candidate authorizations, {group} = suffix above</span>
 <a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">  </span><span class="c1"># header_columns: ["ID", "Cible", "Autorisation"]  # override if bastion uses different column labels</span>
 </code></pre></div>
-<p><code>bastion</code> is accepted as a backward-compatible alias key.</p>
 <p>Wallix-specific fields:</p>
 <ul>
 <li><code>template</code> — login-string template. Default: <code>{target_user}@%n:SSH:{bastion_user}</code>.</li>
@@ -1951,6 +1965,12 @@ border with a <code>⚠ PRODUCTION</code> line in the details panel.</p>
 <hr />
 <h2 id="complete-example">Complete Example<a class="headerlink" href="#complete-example" title="Permanent link">&para;</a></h2>
 <p>See <a href="../examples/full_config.yaml">../examples/full_config.yaml</a> for a complete annotated configuration.</p>
+<h2 id="migrating-to-10">Migrating to 1.0<a class="headerlink" href="#migrating-to-10" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>mode: bastion</code> is no longer accepted — use <code>mode: wallix</code>.</li>
+<li>The <code>wallix_group</code> key is removed — set <code>group</code> inside the <code>wallix</code> block instead (<code>wallix: { group: "devops-admins" }</code>). Run <code>susshi --validate</code> to find leftover <code>wallix_group</code> keys, which are reported as unknown fields.</li>
+<li><code>~/.susshi_state.json</code> is now versioned. Existing files are migrated automatically; an unreadable one is kept as <code>~/.susshi_state.json.bak</code>.</li>
+</ul>
 
 
 
@@ -2019,10 +2039,10 @@ border with a <code>⚠ PRODUCTION</code> line in the details panel.</p>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.instant", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.instant", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>

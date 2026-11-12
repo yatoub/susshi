@@ -21,7 +21,7 @@
       
       
       <link rel="icon" href="../susshi.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
     
     
       
@@ -29,10 +29,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -972,6 +972,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#stability-from-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stability from 1.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#near-term" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1050,6 +1061,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#stability-from-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stability from 1.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#near-term" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1114,11 +1136,35 @@
 </thead>
 <tbody>
 <tr>
-<td>v0.17</td>
-<td>Improved README and documentation badges</td>
+<td>v1.0</td>
+<td>Stable release: versioned <code>state.json</code>, legacy <code>mode: bastion</code> / <code>wallix_group</code> removed (see <a href="../configuration/#migrating-to-10">Migrating to 1.0</a>)</td>
 </tr>
 <tr>
-<td>v0.16</td>
+<td>v0.25</td>
+<td>Ad-hoc commands and probes through a Wallix bastion, SCP progress for Wallix transfers</td>
+</tr>
+<tr>
+<td>v0.24</td>
+<td>SCP, tunnels and config-declared authorizations for Wallix</td>
+</tr>
+<tr>
+<td>v0.23</td>
+<td>Production badge and opt-in connection confirmation</td>
+</tr>
+<tr>
+<td>v0.22</td>
+<td>Include recursion limited to 2 levels, outdated include repo warnings</td>
+</tr>
+<tr>
+<td>v0.21</td>
+<td>First-run wizard</td>
+</tr>
+<tr>
+<td>v0.19–v0.20</td>
+<td>Nix flake, APT repository</td>
+</tr>
+<tr>
+<td>v0.16–v0.17</td>
 <td>Hardened YAML deserialization, 86 % test coverage</td>
 </tr>
 <tr>
@@ -1127,6 +1173,14 @@
 </tr>
 </tbody>
 </table>
+<h2 id="stability-from-10">Stability from 1.0<a class="headerlink" href="#stability-from-10" title="Permanent link">&para;</a></h2>
+<p>From 1.0, susshi follows <a href="https://semver.org/">Semantic Versioning</a>: breaking changes to the following only happen in a new major version.</p>
+<ul>
+<li>the YAML inventory schema (keys, inheritance, <code>!include</code>, variable interpolation);</li>
+<li>the CLI flags and the output of <code>--list</code>/export formats;</li>
+<li>the persisted state file (<code>~/.susshi_state.json</code>), which is versioned and migrated automatically.</li>
+</ul>
+<p>Platform support: Linux and macOS are fully supported. On Windows, the TUI and config parsing work, but interactive SSH (PTY) and Wallix are Unix-only; full Windows support is a long-term goal (below).</p>
 <h2 id="near-term">Near-term<a class="headerlink" href="#near-term" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] <strong>Homebrew tap</strong> — <code>brew install yatoub/tap/susshi</code> for macOS users without cargo</li>
@@ -1137,7 +1191,7 @@
 <h2 id="long-term">Long-term<a class="headerlink" href="#long-term" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] <strong>Config UI</strong> — edit the inventory from within the TUI without touching YAML</li>
-<li>[ ] <strong>Full Windows TUI</strong> — PTY support on Windows (currently config-only)</li>
+<li>[ ] <strong>Full Windows support</strong> — PTY and Wallix support on Windows (interactive SSH is currently Unix-only)</li>
 <li>[ ] <strong>Plugin system</strong> — hook into the connection lifecycle with external binaries</li>
 <li>[ ] <strong>susshi sync</strong> — optional encrypted config sync via a self-hosted backend (privacy-preserving, no cloud dependency)</li>
 </ul>
@@ -1214,10 +1268,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.instant", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.instant", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.a5f9d56c.min.js"></script>
       
     
   </body>
