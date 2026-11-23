@@ -39,7 +39,7 @@ ureq = "3"
 serde-saphyr = { version = "2", default-features = false, features = ["deserialize"] }
 
 [target.'cfg(unix)'.dependencies]
-nix = { version = "0.31", features = ["term", "process"] }
+nix = { version = "0.32", features = ["term", "process"] }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 ssh2 = "0.9"
